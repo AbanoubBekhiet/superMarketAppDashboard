@@ -7,7 +7,7 @@ import prettierConfig from 'eslint-config-prettier';
 import { defineConfig, globalIgnores } from 'eslint/config';
 
 export default defineConfig([
-  globalIgnores(['dist', 'public/mockServiceWorker.js']),
+  globalIgnores(['dist', 'public/mockServiceWorker.js', 'src/dataconnect-generated']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

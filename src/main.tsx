@@ -3,21 +3,12 @@ import { createRoot } from 'react-dom/client';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
 import { AppErrorBoundary } from '@/components/ui/StateViews';
-import { env } from '@/lib/env';
 import { queryClient } from '@/lib/queryClient';
 import { App } from './App';
 import './index.css';
 
-async function enableMocking(): Promise<void> {
-  if (!env.useMocks) return;
-  const { worker } = await import('@/services/mock/browser');
-  await worker.start({ onUnhandledFrame: 'bypass', quiet: true });
-}
-
-enableMocking().then(() => {
-  const rootEl = document.getElementById('root');
-  if (!rootEl) return;
-
+const rootEl = document.getElementById('root');
+if (rootEl) {
   createRoot(rootEl).render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>
@@ -39,4 +30,4 @@ enableMocking().then(() => {
       </QueryClientProvider>
     </StrictMode>,
   );
-});
+}

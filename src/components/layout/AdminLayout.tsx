@@ -5,10 +5,12 @@ import {
   LayoutDashboard,
   Leaf,
   LogOut,
+  Megaphone,
   Menu,
   Package,
   ReceiptText,
   Search,
+  ShieldCheck,
   Users,
   X,
 } from 'lucide-react';
@@ -31,12 +33,14 @@ interface AdminLayoutProps {
   children: ReactNode;
 }
 
-const NAV_ITEMS = [
-  { to: '/', label: STRINGS.sidebar.overview, icon: LayoutDashboard },
-  { to: '/orders', label: STRINGS.sidebar.orders, icon: ReceiptText },
-  { to: '/products', label: STRINGS.sidebar.products, icon: Package },
-  { to: '/categories', label: STRINGS.sidebar.categories, icon: FolderTree },
-  { to: '/customers', label: STRINGS.sidebar.customers, icon: Users },
+const STAFF_NAV_ITEMS = [
+  { to: '/', label: STRINGS.sidebar.overview, icon: LayoutDashboard, adminOnly: false },
+  { to: '/orders', label: STRINGS.sidebar.orders, icon: ReceiptText, adminOnly: false },
+  { to: '/products', label: STRINGS.sidebar.products, icon: Package, adminOnly: false },
+  { to: '/categories', label: STRINGS.sidebar.categories, icon: FolderTree, adminOnly: false },
+  { to: '/customers', label: STRINGS.sidebar.customers, icon: Users, adminOnly: false },
+  { to: '/marketing', label: STRINGS.sidebar.marketing, icon: Megaphone, adminOnly: false },
+  { to: '/sub-admins', label: STRINGS.sidebar.subAdmins, icon: ShieldCheck, adminOnly: true },
 ] as const;
 
 export function AdminLayout({
@@ -58,11 +62,15 @@ export function AdminLayout({
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     toast.success(STRINGS.auth.logoutSuccess);
     navigate('/login', { replace: true });
   };
+
+  const visibleNavItems = STAFF_NAV_ITEMS.filter(
+    (item) => !item.adminOnly || user?.role === 'admin',
+  );
 
   const sidebarContent = (
     <div className="flex flex-col justify-between h-full">
@@ -94,7 +102,7 @@ export function AdminLayout({
 
         {/* Navigation Links */}
         <nav aria-label={STRINGS.brand.subtitle} className="flex flex-col gap-xs">
-          {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
+          {visibleNavItems.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
@@ -126,7 +134,9 @@ export function AdminLayout({
               {user?.name ?? 'سارة الشافعي'}
             </span>
             <span className="font-body text-body-sm text-on-surface-subtle">
-              {STRINGS.brand.roleLabel}
+              {user?.role === 'admin'
+                ? STRINGS.brand.adminRoleBadge
+                : STRINGS.brand.subAdminRoleBadge}
             </span>
           </div>
         </div>

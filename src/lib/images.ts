@@ -21,6 +21,16 @@ const IMAGE_MAP: Record<string, string> = {
   'avatar-ahmed': '/images/tazaj/avatar-ahmed.png',
 };
 
-export function getImageUrl(key: string): string {
-  return IMAGE_MAP[key] ?? IMAGE_MAP['prod-tomatoes'];
+/**
+ * Resolves either a Cloud Storage download URL, a seeded `local://key` asset, or a legacy key.
+ */
+export function getImageUrl(keyOrUrl?: string | null): string {
+  if (!keyOrUrl) return IMAGE_MAP['prod-tomatoes'];
+  if (keyOrUrl.startsWith('http://') || keyOrUrl.startsWith('https://') || keyOrUrl.startsWith('/')) {
+    return keyOrUrl;
+  }
+  const normalized = keyOrUrl.startsWith('local://')
+    ? keyOrUrl.replace('local://', '')
+    : keyOrUrl;
+  return IMAGE_MAP[normalized] ?? IMAGE_MAP['prod-tomatoes'];
 }

@@ -1,12 +1,14 @@
-import { apiClient } from '@/services/api/client';
+import { adminListStaffNotifications, markAllMyNotificationsRead } from '@/dataconnect-generated';
+import { dataConnect } from '@/services/firebase/app';
+import { mapNotifications } from '@/services/firebase/mappers';
 import type { NotificationItem } from '@/types/domain';
 
 export async function fetchNotifications(): Promise<NotificationItem[]> {
-  const { data } = await apiClient.get<NotificationItem[]>('/notifications');
-  return data;
+  const { data } = await adminListStaffNotifications(dataConnect);
+  return mapNotifications(data.notifications);
 }
 
 export async function markAllNotificationsRead(): Promise<NotificationItem[]> {
-  const { data } = await apiClient.post<NotificationItem[]>('/notifications/read-all');
-  return data;
+  await markAllMyNotificationsRead(dataConnect);
+  return fetchNotifications();
 }

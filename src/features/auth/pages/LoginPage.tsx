@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Leaf, Lock, Mail } from 'lucide-react';
+import { Leaf, Lock, Phone } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -9,10 +9,12 @@ import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { STRINGS } from '@/constants/strings';
 import { useAdminLogin } from '@/features/auth/hooks/useAuth';
+import { env } from '@/lib/env';
+import { isValidPhoneNumber } from '@/lib/phoneAuth';
 import { useWebAuthStore } from '@/store/authStore';
 
 const loginSchema = z.object({
-  email: z.string().trim().email(STRINGS.auth.emailInvalid),
+  phone: z.string().trim().refine(isValidPhoneNumber, STRINGS.auth.phoneInvalid),
   password: z.string().min(6, STRINGS.auth.passwordMin),
 });
 
@@ -25,16 +27,17 @@ export function LoginPage() {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: 'admin@tazaj.eg',
-      password: 'password123',
+      phone: env.useEmulators ? '01000000001' : '',
+      password: env.useEmulators ? 'Admin123!' : '',
     },
   });
 
-  if (user?.role === 'admin') {
+  if (user && (user.role === 'admin' || user.role === 'sub_admin') && user.isActive) {
     return <Navigate to="/" replace />;
   }
 
@@ -42,17 +45,9 @@ export function LoginPage() {
     try {
       await login(values);
       toast.success(STRINGS.auth.loginSuccess);
-    } catch {
-      toast.error(STRINGS.auth.invalidCredentials);
-    }
-  };
-
-  const handleQuickDemo = async () => {
-    try {
-      await login({ email: 'admin@tazaj.eg', password: 'password123' });
-      toast.success(STRINGS.auth.loginSuccess);
-    } catch {
-      toast.error(STRINGS.auth.invalidCredentials);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : STRINGS.auth.invalidCredentials;
+      toast.error(msg || STRINGS.auth.invalidCredentials);
     }
   };
 
@@ -70,12 +65,13 @@ export function LoginPage() {
         <Card>
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-md" noValidate>
             <Input
-              label={STRINGS.auth.emailLabel}
-              type="email"
-              placeholder={STRINGS.auth.emailPlaceholder}
-              startIcon={<Mail className="w-4 h-4" />}
-              error={errors.email?.message}
-              {...register('email')}
+              label={STRINGS.auth.phoneLabel}
+              type="tel"
+              dir="ltr"
+              placeholder={STRINGS.auth.phonePlaceholder}
+              startIcon={<Phone className="w-4 h-4" />}
+              error={errors.phone?.message}
+              {...register('phone')}
             />
 
             <Input
@@ -91,15 +87,34 @@ export function LoginPage() {
               {STRINGS.auth.loginButton}
             </Button>
 
-            <Button
-              type="button"
-              variant="mint"
-              size="md"
-              disabled={isPending}
-              onClick={handleQuickDemo}
-            >
-              {STRINGS.auth.demoAdminButton}
-            </Button>
+            {env.useEmulators ? (
+              <div className="flex flex-col gap-xs pt-xs border-t border-outline-subtle">
+                <Button
+                  type="button"
+                  variant="mint"
+                  size="sm"
+                  disabled={isPending}
+                  onClick={() => {
+                    setValue('phone', '01000000001');
+                    setValue('password', 'Admin123!');
+                  }}
+                >
+                  {STRINGS.auth.demoAdminButton}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={isPending}
+                  onClick={() => {
+                    setValue('phone', '01000000002');
+                    setValue('password', 'SubAdmin123!');
+                  }}
+                >
+                  {STRINGS.auth.demoSubAdminButton}
+                </Button>
+              </div>
+            ) : null}
           </form>
         </Card>
       </div>

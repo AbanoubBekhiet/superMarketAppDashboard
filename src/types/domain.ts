@@ -1,20 +1,30 @@
-export type UserRole = 'user' | 'admin';
+export type UserRole = 'customer' | 'admin' | 'sub_admin';
 
 export type UserAccountStatus = 'active' | 'suspended';
 
+export interface AdminProfileInfo {
+  id: string;
+  department: string;
+  permissionsNotes?: string | null;
+  createdByName?: string | null;
+}
+
 export interface User {
   id: string;
+  firebaseUid: string;
   name: string;
   phone: string;
   email: string;
   role: UserRole;
   status: UserAccountStatus;
+  isActive: boolean;
   avatarKey?: string;
   area: string;
   ordersCount: number;
   totalSpent: number;
   lastOrderCode?: string;
   createdAt: string;
+  adminProfile?: AdminProfileInfo | null;
 }
 
 export interface AuthSession {
@@ -25,11 +35,27 @@ export interface AuthSession {
 export interface Address {
   id: string;
   label: string;
+  governorate: string;
   street: string;
   area: string;
   city: string;
-  building?: string;
-  floor?: string;
+  building?: string | null;
+  floor?: string | null;
+  apartment?: string | null;
+  landmark?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  isDefault: boolean;
+  deliveryNotes?: string | null;
+}
+
+export interface Vehicle {
+  id: string;
+  make: string;
+  model: string;
+  year?: number | null;
+  color: string;
+  plateNumber: string;
   isDefault: boolean;
 }
 
@@ -37,13 +63,17 @@ export interface Subcategory {
   id: string;
   categoryId: string;
   name: string;
+  isActive?: boolean;
 }
 
 export interface Category {
   id: string;
+  parentId?: string | null;
   name: string;
+  slug?: string;
   imageKey: string;
   productCount: number;
+  sortOrder?: number;
   isActive: boolean;
   subcategories: Subcategory[];
 }
@@ -58,6 +88,7 @@ export interface ProductWeightOption {
 export interface Product {
   id: string;
   sku: string;
+  barcode?: string | null;
   name: string;
   brand: string;
   categoryId: string;
@@ -70,7 +101,9 @@ export interface Product {
   oldPrice?: number;
   discountPercent?: number;
   stock: number;
+  lowStockThreshold?: number;
   stockUnit: string;
+  isActive?: boolean;
   isBestSeller?: boolean;
   isDailyOffer?: boolean;
   badgeText?: string;
@@ -78,8 +111,9 @@ export interface Product {
 }
 
 export interface CartItem {
+  id?: string;
   productId: string;
-  weightOptionId: string;
+  weightOptionId?: string | null;
   name: string;
   imageKey: string;
   unitLabel: string;
@@ -87,11 +121,43 @@ export interface CartItem {
   quantity: number;
 }
 
+export interface Coupon {
+  id: string;
+  code: string;
+  type: 'percentage' | 'fixed';
+  value: number;
+  minOrder: number;
+  maxDiscount?: number | null;
+  usageLimit?: number | null;
+  usedCount: number;
+  expiresAt?: string | null;
+  isActive: boolean;
+}
+
+export interface Banner {
+  id: string;
+  tag: string;
+  title: string;
+  subtitle: string;
+  ctaLabel: string;
+  imageKey: string;
+  categoryId?: string | null;
+  productId?: string | null;
+  sortOrder: number;
+  isActive: boolean;
+}
+
+export interface AppSettingItem {
+  key: string;
+  value: string;
+  description?: string | null;
+}
+
 export type DeliveryTimeSlot = 'instant' | 'scheduled';
 
 export type PaymentMethod = 'cod' | 'card' | 'wallet';
 
-export type PaymentStatus = 'paid' | 'cod';
+export type PaymentStatus = 'paid' | 'cod' | 'refunded';
 
 export type OrderStatus =
   | 'pending'
@@ -109,8 +175,18 @@ export interface OrderItem {
   imageKey: string;
 }
 
+export interface OrderStatusHistoryEntry {
+  id: string;
+  fromStatus?: string | null;
+  toStatus: OrderStatus;
+  note?: string | null;
+  changedByName?: string | null;
+  createdAt: string;
+}
+
 export interface Order {
   id: string;
+  orderNumber?: number;
   code: string;
   customerId: string;
   customerName: string;
@@ -130,7 +206,10 @@ export interface Order {
   courierName?: string;
   courierPhone?: string;
   etaMinutes?: number;
+  placedAt: string;
+  deliveredAt?: string | null;
   createdAt: string;
+  statusHistory?: OrderStatusHistoryEntry[];
 }
 
 export interface NotificationItem {
@@ -138,8 +217,10 @@ export interface NotificationItem {
   title: string;
   body: string;
   relativeTime: string;
+  createdAt: string;
   isRead: boolean;
-  type: 'order' | 'promo' | 'stock';
+  type: 'order_update' | 'promotion' | 'system' | 'admin_alert';
+  dataPayload?: string | null;
 }
 
 export interface ActivityItem {
@@ -179,8 +260,12 @@ export interface DashboardOverview {
   weeklyRevenue: WeeklyRevenuePoint[];
   categoryDistribution: CategorySalesDistribution[];
   recentActivities: ActivityItem[];
-  topSellingProducts: Array<{
-    product: Product;
+  topSellingProducts: {
+    productId: string;
+    name: string;
+    categoryName: string;
+    price: number;
+    imageKey: string;
     todayOrders: number;
-  }>;
+  }[];
 }

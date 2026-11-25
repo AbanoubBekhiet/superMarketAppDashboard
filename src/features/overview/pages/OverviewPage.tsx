@@ -45,7 +45,7 @@ export function OverviewPage() {
     if (!overview) return [];
     const q = search.trim().toLowerCase();
     if (!q) return overview.topSellingProducts;
-    return overview.topSellingProducts.filter((p) => p.product.name.toLowerCase().includes(q));
+    return overview.topSellingProducts.filter((p) => p.name.toLowerCase().includes(q));
   }, [overview, search]);
 
   return (
@@ -320,25 +320,25 @@ export function OverviewPage() {
                 <EmptyState />
               ) : (
                 <div className="flex flex-col gap-md">
-                  {filteredTopProducts.map(({ product, todayOrders }) => (
-                    <div key={product.id} className="flex items-center justify-between gap-md">
+                  {filteredTopProducts.map((item) => (
+                    <div key={item.productId} className="flex items-center justify-between gap-md">
                       <div className="flex items-center gap-md">
                         <img
-                          src={getImageUrl(product.imageKey)}
-                          alt={product.name}
+                          src={getImageUrl(item.imageKey)}
+                          alt={item.name}
                           className="w-12 h-12 rounded-md object-cover bg-surface shrink-0"
                         />
                         <div className="flex flex-col">
                           <span className="font-title text-title-sm text-on-surface">
-                            {product.name}
+                            {item.name}
                           </span>
                           <span className="font-body text-body-sm text-on-surface-subtle tabular-nums">
-                            {formatNumber(todayOrders)} {STRINGS.overview.todayOrdersSuffix}
+                            {formatNumber(item.todayOrders)} {STRINGS.overview.todayOrdersSuffix}
                           </span>
                         </div>
                       </div>
                       <span className="font-headline text-title-sm text-primary tabular-nums">
-                        {formatCurrency(product.price)}
+                        {formatCurrency(item.price)}
                       </span>
                     </div>
                   ))}

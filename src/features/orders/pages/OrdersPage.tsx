@@ -230,6 +230,30 @@ export function OrdersPage() {
                 label: STRINGS.orders.statusLabels[st],
               }))}
             />
+
+            {selectedOrder.statusHistory && selectedOrder.statusHistory.length > 0 ? (
+              <div className="flex flex-col gap-xs pt-sm border-t border-outline-subtle">
+                <h3 className="font-title text-title-sm text-on-surface">
+                  {STRINGS.orders.historyTitle}
+                </h3>
+                <div className="flex flex-col gap-xs">
+                  {selectedOrder.statusHistory.map((h) => (
+                    <div
+                      key={h.id}
+                      className="text-body-sm text-on-surface-muted flex items-center justify-between gap-sm bg-surface px-sm py-xs rounded-sm border border-outline-subtle"
+                    >
+                      <span>
+                        {STRINGS.orders.statusLabels[h.toStatus]}
+                        {h.note ? ` — ${h.note}` : ''}
+                      </span>
+                      {h.changedByName ? (
+                        <span className="text-on-surface-subtle">{h.changedByName}</span>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </Modal>

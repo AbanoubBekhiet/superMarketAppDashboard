@@ -15,6 +15,7 @@ import { Select } from '@/components/ui/Select';
 import { ErrorState } from '@/components/ui/StateViews';
 import { STRINGS } from '@/constants/strings';
 import { useCategories } from '@/features/categories/hooks/useCategories';
+import { uploadProductImage } from '@/features/products/api/productsApi';
 import {
   useCreateProduct,
   useDeleteProduct,
@@ -43,6 +44,8 @@ export function ProductsPage() {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   const { data: categories = [] } = useCategories();
   const {
@@ -66,7 +69,7 @@ export function ProductsPage() {
     defaultValues: {
       name: '',
       sku: '',
-      categoryId: 'cat-1',
+      categoryId: '',
       price: '',
       stock: '',
       stockUnit: 'عبوة',
@@ -76,6 +79,7 @@ export function ProductsPage() {
   const handleEdit = useCallback(
     (product: Product) => {
       setEditingProduct(product);
+      setUploadedImageUrl(product.imageKey);
       reset({
         name: product.name,
         sku: product.sku,
@@ -90,10 +94,11 @@ export function ProductsPage() {
 
   const handleReset = () => {
     setEditingProduct(null);
+    setUploadedImageUrl(null);
     reset({
       name: '',
       sku: '',
-      categoryId: categories[0]?.id ?? 'cat-1',
+      categoryId: categories[0]?.id ?? '',
       price: '',
       stock: '',
       stockUnit: 'عبوة',
@@ -109,7 +114,7 @@ export function ProductsPage() {
         reset({
           name: '',
           sku: '',
-          categoryId: categories[0]?.id ?? 'cat-1',
+          categoryId: categories[0]?.id ?? '',
           price: '',
           stock: '',
           stockUnit: 'عبوة',
@@ -119,11 +124,33 @@ export function ProductsPage() {
     [categories, deleteProduct, editingProduct?.id, reset],
   );
 
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setIsUploadingImage(true);
+    try {
+      const url = await uploadProductImage(editingProduct?.sku ?? 'new', file);
+      setUploadedImageUrl(url);
+      toast.success(STRINGS.common.imageUploaded);
+    } catch {
+      toast.error(STRINGS.common.errorTitle);
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
   const onSubmit = async (values: ProductFormValues) => {
+    const resolvedCategoryId = values.categoryId || categories[0]?.id;
+    if (!resolvedCategoryId) return;
+    const payload = {
+      ...values,
+      categoryId: resolvedCategoryId,
+      imageUrl: uploadedImageUrl ?? editingProduct?.imageKey,
+    };
     if (editingProduct) {
-      await updateProduct({ id: editingProduct.id, payload: values });
+      await updateProduct({ id: editingProduct.id, payload });
     } else {
-      await createProduct(values);
+      await createProduct(payload);
     }
     toast.success(STRINGS.products.savedToast);
     handleReset();
@@ -219,7 +246,7 @@ export function ProductsPage() {
         <Card padded={false} className="lg:col-span-8 overflow-hidden">
           <div className="px-lg py-md border-b border-outline-subtle flex items-center justify-between gap-md flex-wrap">
             <h2 className="font-headline text-title-lg text-on-surface tabular-nums">
-              {STRINGS.products.registeredTitle} ({formatNumber(1240 + Math.max(0, products.length - 12))})
+              {STRINGS.products.registeredTitle} ({formatNumber(products.length)})
             </h2>
             <div className="w-48">
               <Select
@@ -298,6 +325,24 @@ export function ProductsPage() {
               error={errors.stockUnit?.message}
               {...register('stockUnit')}
             />
+
+            <div className="flex flex-col gap-xs">
+              <label className="font-title text-title-sm text-on-surface">
+                {STRINGS.common.uploadImage}
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                disabled={isUploadingImage}
+                className="font-body text-body-sm text-on-surface-muted file:me-sm file:px-md file:py-xs file:rounded-md file:border file:border-outline-subtle file:bg-mint-surface file:text-on-mint-surface"
+              />
+              {isUploadingImage ? (
+                <span className="font-body text-body-sm text-primary">
+                  {STRINGS.common.uploadingImage}
+                </span>
+              ) : null}
+            </div>
 
             <div className="flex items-center gap-sm pt-sm">
               <Button

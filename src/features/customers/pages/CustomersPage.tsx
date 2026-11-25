@@ -157,7 +157,7 @@ export function CustomersPage() {
       <Card padded={false} className="overflow-hidden">
         <div className="px-lg py-md border-b border-outline-subtle flex items-center justify-between gap-md flex-wrap">
           <h2 className="font-headline text-title-lg text-on-surface tabular-nums">
-            {STRINGS.customers.registeredTitle} ({formatNumber(2418 + Math.max(0, customers.length - 4))})
+            {STRINGS.customers.registeredTitle} ({formatNumber(customers.length)})
           </h2>
           <div className="w-44">
             <Select
