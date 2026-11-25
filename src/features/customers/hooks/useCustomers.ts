@@ -1,10 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { User, UserAccountStatus } from '@/types/domain';
 import {
+  deleteCustomer,
   fetchCustomerOrders,
   fetchCustomers,
+  updateCustomer,
   updateCustomerStatus,
   type CustomersQueryParams,
+  type UpdateCustomerPayload,
 } from '../api/customersApi';
 
 export const customerKeys = {
@@ -46,6 +49,29 @@ export function useUpdateCustomerStatus() {
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: customerKeys.all });
+    },
+  });
+}
+
+export function useUpdateCustomer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: UpdateCustomerPayload }) =>
+      updateCustomer(id, payload),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: customerKeys.all });
+      await qc.refetchQueries({ queryKey: customerKeys.all });
+    },
+  });
+}
+
+export function useDeleteCustomer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteCustomer(id),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: customerKeys.all });
+      await qc.refetchQueries({ queryKey: customerKeys.all });
     },
   });
 }

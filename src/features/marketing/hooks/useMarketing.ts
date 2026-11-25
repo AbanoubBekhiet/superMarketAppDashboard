@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  deleteBanner,
   deleteCoupon,
   fetchAppSettings,
   fetchBanners,
@@ -44,6 +45,14 @@ export function useUpsertBanner() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: upsertBanner,
+    onSuccess: () => qc.invalidateQueries({ queryKey: marketingKeys.banners }),
+  });
+}
+
+export function useDeleteBanner() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: deleteBanner,
     onSuccess: () => qc.invalidateQueries({ queryKey: marketingKeys.banners }),
   });
 }

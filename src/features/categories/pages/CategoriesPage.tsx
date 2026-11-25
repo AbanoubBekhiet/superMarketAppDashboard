@@ -1,13 +1,15 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus } from 'lucide-react';
+import { Package, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { CardSkeleton, EmptyState, ErrorState } from '@/components/ui/StateViews';
@@ -18,6 +20,7 @@ import {
   useDeleteCategory,
   useUpdateCategory,
 } from '@/features/categories/hooks/useCategories';
+import { useInfiniteSlice } from '@/hooks/useInfiniteSlice';
 import { formatNumber } from '@/lib/format';
 import { getImageUrl } from '@/lib/images';
 import type { Category } from '@/types/domain';
@@ -30,14 +33,29 @@ const categorySchema = z.object({
 type CategoryFormValues = z.infer<typeof categorySchema>;
 
 export function CategoriesPage() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Category | null>(null);
+  const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
 
   const { data: categories = [], isLoading, isError, refetch } = useCategories(search);
   const { mutateAsync: createCategory, isPending: isCreating } = useCreateCategory();
   const { mutateAsync: updateCategory, isPending: isUpdating } = useUpdateCategory();
-  const { mutateAsync: deleteCategory } = useDeleteCategory();
+  const { mutateAsync: deleteCategory, isPending: isDeleting } = useDeleteCategory();
+
+  const {
+    visibleItems: visibleCategories,
+    hasMore,
+    loadMore,
+    sentinelRef,
+    totalCount,
+  } = useInfiniteSlice({
+    items: categories,
+    initialCount: 12,
+    step: 12,
+    resetKey: `${search}-${categories.length}`,
+  });
 
   const {
     register,
@@ -62,18 +80,32 @@ export function CategoriesPage() {
   };
 
   const onSubmit = async (values: CategoryFormValues) => {
-    if (editing) {
-      await updateCategory({ id: editing.id, payload: values });
-    } else {
-      await createCategory(values);
+    try {
+      if (editing) {
+        await updateCategory({ id: editing.id, payload: values });
+      } else {
+        await createCategory(values);
+      }
+      toast.success(STRINGS.categories.savedToast);
+      setEditing(null);
+      reset({ name: '', isActive: true });
+      setModalOpen(false);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : STRINGS.common.errorMessage;
+      toast.error(msg || STRINGS.common.errorMessage);
     }
-    toast.success(STRINGS.categories.savedToast);
-    setModalOpen(false);
   };
 
-  const handleDelete = async (id: string) => {
-    await deleteCategory(id);
-    toast.success(STRINGS.categories.deletedToast);
+  const handleConfirmDelete = async () => {
+    if (!deletingCategory) return;
+    try {
+      await deleteCategory(deletingCategory.id);
+      toast.success(STRINGS.categories.deletedToast);
+      setDeletingCategory(null);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : STRINGS.common.errorMessage;
+      toast.error(msg || STRINGS.common.errorMessage);
+    }
   };
 
   return (
@@ -98,55 +130,77 @@ export function CategoriesPage() {
       ) : categories.length === 0 ? (
         <EmptyState />
       ) : (
-        <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-lg items-stretch">
-          {categories.map((cat) => (
-            <Card key={cat.id} className="flex flex-col justify-between gap-base">
-              <div className="flex items-center gap-md">
-                <div className="w-16 h-16 rounded-lg bg-mint-surface border border-outline p-xs shrink-0 overflow-hidden">
-                  <img
-                    src={getImageUrl(cat.imageKey)}
-                    alt={cat.name}
-                    className="w-full h-full object-cover rounded-md"
-                  />
+        <>
+          <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-lg items-stretch">
+            {visibleCategories.map((cat) => (
+              <Card key={cat.id} className="flex flex-col justify-between gap-base">
+                <div className="flex items-center gap-md">
+                  <div className="w-16 h-16 rounded-lg bg-mint-surface border border-outline p-xs shrink-0 overflow-hidden">
+                    <img
+                      src={getImageUrl(cat.imageKey)}
+                      alt={cat.name}
+                      className="w-full h-full object-cover rounded-md"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-xs">
+                    <h2 className="font-headline text-title-lg text-on-surface">{cat.name}</h2>
+                    <span className="font-body text-body-sm text-on-surface-muted tabular-nums">
+                      {formatNumber(cat.productCount)} {STRINGS.categories.productCountSuffix} •{' '}
+                      {cat.isActive
+                        ? STRINGS.categories.activeLabel
+                        : STRINGS.categories.inactiveLabel}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex flex-col gap-xs">
-                  <h2 className="font-headline text-title-lg text-on-surface">{cat.name}</h2>
-                  <span className="font-body text-body-sm text-on-surface-muted tabular-nums">
-                    {formatNumber(cat.productCount)} {STRINGS.categories.productCountSuffix} •{' '}
-                    {cat.isActive
-                      ? STRINGS.categories.activeLabel
-                      : STRINGS.categories.inactiveLabel}
-                  </span>
-                </div>
-              </div>
 
-              <footer className="pt-md border-t border-outline-subtle flex items-center justify-between gap-sm">
-                <Badge variant={cat.isActive ? 'mint' : 'neutral'}>
-                  {cat.isActive
-                    ? STRINGS.categories.visibleBadge
-                    : STRINGS.categories.hiddenBadge}
-                </Badge>
-                <div className="flex items-center gap-xs">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-primary"
-                    onClick={() => openEditModal(cat)}
-                  >
-                    {STRINGS.common.edit}
-                  </Button>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    onClick={() => handleDelete(cat.id)}
-                  >
-                    {STRINGS.common.delete}
-                  </Button>
-                </div>
-              </footer>
-            </Card>
-          ))}
-        </section>
+                <footer className="pt-md border-t border-outline-subtle flex items-center justify-between gap-sm">
+                  <Badge variant={cat.isActive ? 'mint' : 'neutral'}>
+                    {cat.isActive
+                      ? STRINGS.categories.visibleBadge
+                      : STRINGS.categories.hiddenBadge}
+                  </Badge>
+                  <div className="flex items-center gap-xs flex-wrap">
+                    <Button
+                      variant="mint"
+                      size="sm"
+                      onClick={() => navigate(`/products?categoryId=${cat.id}`)}
+                    >
+                      <Package className="w-3.5 h-3.5" aria-hidden="true" />
+                      <span>{STRINGS.categories.viewProductsBtn}</span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-primary"
+                      onClick={() => openEditModal(cat)}
+                    >
+                      {STRINGS.common.edit}
+                    </Button>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={() => setDeletingCategory(cat)}
+                    >
+                      {STRINGS.common.delete}
+                    </Button>
+                  </div>
+                </footer>
+              </Card>
+            ))}
+          </section>
+
+          <div ref={sentinelRef} className="flex items-center justify-between py-sm">
+            <span className="font-body text-body-sm text-on-surface-muted tabular-nums">
+              {STRINGS.common.showingCount} {formatNumber(visibleCategories.length)}{' '}
+              {STRINGS.common.from} {formatNumber(totalCount)}
+            </span>
+            {hasMore ? (
+              <Button variant="outline" size="sm" onClick={loadMore}>
+                {STRINGS.common.loadMore}
+              </Button>
+            ) : null}
+          </div>
+        </>
       )}
 
       {/* Add / Edit Category Modal */}
@@ -196,6 +250,17 @@ export function CategoriesPage() {
           </div>
         </form>
       </Modal>
+      <ConfirmModal
+        open={deletingCategory !== null}
+        onClose={() => setDeletingCategory(null)}
+        onConfirm={handleConfirmDelete}
+        isLoading={isDeleting}
+        message={
+          deletingCategory
+            ? `هل أنت متأكد من حذف قسم «${deletingCategory.name}»؟ لا يمكن التراجع عن هذا الإجراء.`
+            : STRINGS.common.confirmDeleteGeneric
+        }
+      />
     </AdminLayout>
   );
 }

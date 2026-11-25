@@ -8,6 +8,7 @@ import { AdminLayout } from '@/components/layout/AdminLayout';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/StateViews';
@@ -53,6 +54,7 @@ export function SubAdminsPage() {
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<User | null>(null);
+  const [deletingMember, setDeletingMember] = useState<User | null>(null);
   const [resetTarget, setResetTarget] = useState<User | null>(null);
   const [newPasswordInput, setNewPasswordInput] = useState('');
 
@@ -62,7 +64,7 @@ export function SubAdminsPage() {
   const { mutateAsync: createMutate, isPending: isCreating } = useCreateSubAdmin();
   const { mutateAsync: updateMutate, isPending: isUpdating } = useUpdateSubAdmin();
   const { mutate: toggleStatus } = useToggleSubAdminStatus();
-  const { mutate: removeSubAdmin } = useDeleteSubAdmin();
+  const { mutateAsync: removeSubAdmin, isPending: isDeletingMember } = useDeleteSubAdmin();
   const { mutateAsync: resetPasswordMutate, isPending: isResetting } = useResetSubAdminPassword();
 
   const createForm = useForm<CreateFormValues>({
@@ -247,10 +249,7 @@ export function SubAdminsPage() {
                                   variant="danger"
                                   size="sm"
                                   aria-label={STRINGS.common.delete}
-                                  onClick={() => {
-                                    removeSubAdmin(member.id);
-                                    toast.success(STRINGS.subAdmins.deletedToast);
-                                  }}
+                                  onClick={() => setDeletingMember(member)}
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </Button>
@@ -408,6 +407,27 @@ export function SubAdminsPage() {
           </div>
         </div>
       </Modal>
+      <ConfirmModal
+        open={deletingMember !== null}
+        onClose={() => setDeletingMember(null)}
+        isLoading={isDeletingMember}
+        message={
+          deletingMember
+            ? `هل أنت متأكد من حذف حساب المشرف «${deletingMember.name}»؟ لا يمكن التراجع عن هذا الإجراء.`
+            : STRINGS.common.confirmDeleteGeneric
+        }
+        onConfirm={async () => {
+          if (!deletingMember) return;
+          try {
+            await removeSubAdmin(deletingMember.id);
+            toast.success(STRINGS.subAdmins.deletedToast);
+            setDeletingMember(null);
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : STRINGS.common.errorMessage;
+            toast.error(msg || STRINGS.common.errorMessage);
+          }
+        }}
+      />
     </AdminLayout>
   );
 }

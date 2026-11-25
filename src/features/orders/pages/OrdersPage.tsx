@@ -36,10 +36,10 @@ const columnHelper = legacyCreateColumnHelper<Order>();
 
 export function OrdersPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | OrderStatus>('all');
-  const [paymentFilter, setPaymentFilter] = useState<'all' | 'paid' | 'cod'>('all');
   const [search, setSearch] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
+  const { data: allOrders = [] } = useOrders({});
   const {
     data: orders = [],
     isLoading,
@@ -47,7 +47,6 @@ export function OrdersPage() {
     refetch,
   } = useOrders({
     status: statusFilter,
-    paymentStatus: paymentFilter,
     search,
   });
 
@@ -62,13 +61,20 @@ export function OrdersPage() {
   const columns = useMemo(
     () =>
       [
-        columnHelper.accessor('code', {
+        columnHelper.accessor('id', {
           header: STRINGS.orders.columns.code,
-          cell: (info) => (
-            <span className="font-title text-title-sm text-on-surface tabular-nums">
-              {info.getValue()}
-            </span>
-          ),
+          cell: (info) => {
+            const fullId = info.getValue();
+            return (
+              <span
+                dir="ltr"
+                title={fullId}
+                className="inline-block font-title text-title-sm text-on-surface tabular-nums"
+              >
+                #{fullId.slice(0, 8)}
+              </span>
+            );
+          },
         }),
         columnHelper.accessor('customerName', {
           header: STRINGS.orders.columns.customer,
@@ -94,14 +100,7 @@ export function OrdersPage() {
         }),
         columnHelper.accessor('paymentStatus', {
           header: STRINGS.orders.columns.paymentStatus,
-          cell: (info) => {
-            const paid = info.getValue() === 'paid';
-            return (
-              <Badge variant={paid ? 'mint' : 'neutral'}>
-                {paid ? STRINGS.orders.paymentFilters.paid : STRINGS.orders.paymentFilters.cod}
-              </Badge>
-            );
-          },
+          cell: () => <Badge variant="neutral">{STRINGS.orders.paymentFilters.cod}</Badge>,
         }),
         columnHelper.accessor('status', {
           header: STRINGS.orders.columns.orderStatus,
@@ -142,26 +141,16 @@ export function OrdersPage() {
           value={statusFilter}
           onChange={setStatusFilter}
           options={[
-            { value: 'all', label: `${STRINGS.orders.allCountPrefix} (${formatNumber(48)})` },
+            {
+              value: 'all',
+              label: `${STRINGS.orders.allCountPrefix} (${formatNumber(allOrders.length)})`,
+            },
             { value: 'pending', label: STRINGS.orders.statusLabels.pending },
             { value: 'processing', label: STRINGS.orders.statusLabels.processing },
             { value: 'delivered', label: STRINGS.orders.statusLabels.delivered },
             { value: 'cancelled', label: STRINGS.orders.statusLabels.cancelled },
           ]}
         />
-
-        <div className="w-48">
-          <Select
-            aria-label={STRINGS.orders.columns.paymentStatus}
-            value={paymentFilter}
-            onChange={(e) => setPaymentFilter(e.target.value as 'all' | 'paid' | 'cod')}
-            options={[
-              { value: 'all', label: STRINGS.orders.paymentFilters.all },
-              { value: 'paid', label: STRINGS.orders.paymentFilters.paid },
-              { value: 'cod', label: STRINGS.orders.paymentFilters.cod },
-            ]}
-          />
-        </div>
       </section>
 
       {/* Orders Table */}
@@ -174,7 +163,9 @@ export function OrdersPage() {
         open={selectedOrder !== null}
         onClose={() => setSelectedOrder(null)}
         title={
-          selectedOrder ? `${STRINGS.orders.detailsModalTitle} ${selectedOrder.code}` : ''
+          selectedOrder
+            ? `${STRINGS.orders.detailsModalTitle} #${selectedOrder.id.slice(0, 8)}`
+            : ''
         }
       >
         {selectedOrder ? (

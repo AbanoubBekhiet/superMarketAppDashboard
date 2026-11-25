@@ -7,7 +7,10 @@ import { STRINGS } from '@/constants/strings';
 import { LoginPage } from '@/features/auth/pages/LoginPage';
 import { CategoriesPage } from '@/features/categories/pages/CategoriesPage';
 import { CustomersPage } from '@/features/customers/pages/CustomersPage';
-import { MarketingPage } from '@/features/marketing/pages/MarketingPage';
+import { CouponsPage } from '@/features/marketing/pages/CouponsPage';
+import { NotificationsBroadcastPage } from '@/features/marketing/pages/NotificationsBroadcastPage';
+import { OffersPage } from '@/features/marketing/pages/OffersPage';
+import { StoreSettingsPage } from '@/features/marketing/pages/StoreSettingsPage';
 import { OrdersPage } from '@/features/orders/pages/OrdersPage';
 import { OverviewPage } from '@/features/overview/pages/OverviewPage';
 import { ProductsPage } from '@/features/products/pages/ProductsPage';
@@ -111,13 +114,38 @@ export function App() {
           }
         />
         <Route
-          path="/marketing"
+          path="/offers"
           element={
             <ProtectedStaffRoute>
-              <MarketingPage />
+              <OffersPage />
             </ProtectedStaffRoute>
           }
         />
+        <Route
+          path="/coupons"
+          element={
+            <ProtectedStaffRoute>
+              <CouponsPage />
+            </ProtectedStaffRoute>
+          }
+        />
+        <Route
+          path="/notifications"
+          element={
+            <ProtectedStaffRoute>
+              <NotificationsBroadcastPage />
+            </ProtectedStaffRoute>
+          }
+        />
+        <Route
+          path="/store-settings"
+          element={
+            <ProtectedStaffRoute>
+              <StoreSettingsPage />
+            </ProtectedStaffRoute>
+          }
+        />
+        <Route path="/marketing" element={<Navigate to="/offers" replace />} />
         <Route
           path="/sub-admins"
           element={

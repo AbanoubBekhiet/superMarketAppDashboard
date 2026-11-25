@@ -26,8 +26,9 @@ export function useCreateProduct() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (payload: ProductUpsertPayload) => createProduct(payload),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: productKeys.all });
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: productKeys.all });
+      await qc.refetchQueries({ queryKey: productKeys.all });
       qc.invalidateQueries({ queryKey: overviewKeys.all });
     },
   });
@@ -38,8 +39,20 @@ export function useUpdateProduct() {
   return useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: Partial<ProductUpsertPayload> }) =>
       updateProduct(id, payload),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: productKeys.all });
+    onMutate: async ({ id, payload }) => {
+      await qc.cancelQueries({ queryKey: productKeys.all });
+      const previous = qc.getQueriesData<Product[]>({ queryKey: productKeys.all });
+      qc.setQueriesData<Product[]>({ queryKey: productKeys.all }, (old) =>
+        old?.map((p) => (p.id === id ? { ...p, ...payload } : p)),
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, ctx) => {
+      ctx?.previous.forEach(([key, data]) => qc.setQueryData(key, data));
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: productKeys.all });
+      await qc.refetchQueries({ queryKey: productKeys.all });
       qc.invalidateQueries({ queryKey: overviewKeys.all });
     },
   });

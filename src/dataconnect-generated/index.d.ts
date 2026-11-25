@@ -65,6 +65,7 @@ export interface AdminListAllProductsData {
       brand: string;
       price: number;
       salePrice?: number | null;
+      purchasePrice?: number | null;
       sku: string;
       barcode?: string | null;
       unit: string;
@@ -921,6 +922,126 @@ export interface ValidateCouponCodeVariables {
   code: string;
 }
 
+interface AdminListAllCategoriesRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (): QueryRef<AdminListAllCategoriesData, undefined>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect): QueryRef<AdminListAllCategoriesData, undefined>;
+  operationName: string;
+}
+export const adminListAllCategoriesRef: AdminListAllCategoriesRef;
+
+export function adminListAllCategories(): QueryPromise<AdminListAllCategoriesData, undefined>;
+export function adminListAllCategories(dc: DataConnect): QueryPromise<AdminListAllCategoriesData, undefined>;
+
+interface AdminListAllProductsRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars?: AdminListAllProductsVariables): QueryRef<AdminListAllProductsData, AdminListAllProductsVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars?: AdminListAllProductsVariables): QueryRef<AdminListAllProductsData, AdminListAllProductsVariables>;
+  operationName: string;
+}
+export const adminListAllProductsRef: AdminListAllProductsRef;
+
+export function adminListAllProducts(vars?: AdminListAllProductsVariables): QueryPromise<AdminListAllProductsData, AdminListAllProductsVariables>;
+export function adminListAllProducts(dc: DataConnect, vars?: AdminListAllProductsVariables): QueryPromise<AdminListAllProductsData, AdminListAllProductsVariables>;
+
+interface AdminListOrdersRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars?: AdminListOrdersVariables): QueryRef<AdminListOrdersData, AdminListOrdersVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars?: AdminListOrdersVariables): QueryRef<AdminListOrdersData, AdminListOrdersVariables>;
+  operationName: string;
+}
+export const adminListOrdersRef: AdminListOrdersRef;
+
+export function adminListOrders(vars?: AdminListOrdersVariables): QueryPromise<AdminListOrdersData, AdminListOrdersVariables>;
+export function adminListOrders(dc: DataConnect, vars?: AdminListOrdersVariables): QueryPromise<AdminListOrdersData, AdminListOrdersVariables>;
+
+interface AdminListCustomersRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (): QueryRef<AdminListCustomersData, undefined>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect): QueryRef<AdminListCustomersData, undefined>;
+  operationName: string;
+}
+export const adminListCustomersRef: AdminListCustomersRef;
+
+export function adminListCustomers(): QueryPromise<AdminListCustomersData, undefined>;
+export function adminListCustomers(dc: DataConnect): QueryPromise<AdminListCustomersData, undefined>;
+
+interface AdminGetCustomerOrdersRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: AdminGetCustomerOrdersVariables): QueryRef<AdminGetCustomerOrdersData, AdminGetCustomerOrdersVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: AdminGetCustomerOrdersVariables): QueryRef<AdminGetCustomerOrdersData, AdminGetCustomerOrdersVariables>;
+  operationName: string;
+}
+export const adminGetCustomerOrdersRef: AdminGetCustomerOrdersRef;
+
+export function adminGetCustomerOrders(vars: AdminGetCustomerOrdersVariables): QueryPromise<AdminGetCustomerOrdersData, AdminGetCustomerOrdersVariables>;
+export function adminGetCustomerOrders(dc: DataConnect, vars: AdminGetCustomerOrdersVariables): QueryPromise<AdminGetCustomerOrdersData, AdminGetCustomerOrdersVariables>;
+
+interface AdminListCouponsRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (): QueryRef<AdminListCouponsData, undefined>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect): QueryRef<AdminListCouponsData, undefined>;
+  operationName: string;
+}
+export const adminListCouponsRef: AdminListCouponsRef;
+
+export function adminListCoupons(): QueryPromise<AdminListCouponsData, undefined>;
+export function adminListCoupons(dc: DataConnect): QueryPromise<AdminListCouponsData, undefined>;
+
+interface AdminListBannersRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (): QueryRef<AdminListBannersData, undefined>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect): QueryRef<AdminListBannersData, undefined>;
+  operationName: string;
+}
+export const adminListBannersRef: AdminListBannersRef;
+
+export function adminListBanners(): QueryPromise<AdminListBannersData, undefined>;
+export function adminListBanners(dc: DataConnect): QueryPromise<AdminListBannersData, undefined>;
+
+interface AdminListStaffNotificationsRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (): QueryRef<AdminListStaffNotificationsData, undefined>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect): QueryRef<AdminListStaffNotificationsData, undefined>;
+  operationName: string;
+}
+export const adminListStaffNotificationsRef: AdminListStaffNotificationsRef;
+
+export function adminListStaffNotifications(): QueryPromise<AdminListStaffNotificationsData, undefined>;
+export function adminListStaffNotifications(dc: DataConnect): QueryPromise<AdminListStaffNotificationsData, undefined>;
+
+interface AdminOnlyListSubAdminsRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (): QueryRef<AdminOnlyListSubAdminsData, undefined>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect): QueryRef<AdminOnlyListSubAdminsData, undefined>;
+  operationName: string;
+}
+export const adminOnlyListSubAdminsRef: AdminOnlyListSubAdminsRef;
+
+export function adminOnlyListSubAdmins(): QueryPromise<AdminOnlyListSubAdminsData, undefined>;
+export function adminOnlyListSubAdmins(dc: DataConnect): QueryPromise<AdminOnlyListSubAdminsData, undefined>;
+
+interface AdminOnlyListAuditLogsRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (): QueryRef<AdminOnlyListAuditLogsData, undefined>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect): QueryRef<AdminOnlyListAuditLogsData, undefined>;
+  operationName: string;
+}
+export const adminOnlyListAuditLogsRef: AdminOnlyListAuditLogsRef;
+
+export function adminOnlyListAuditLogs(): QueryPromise<AdminOnlyListAuditLogsData, undefined>;
+export function adminOnlyListAuditLogs(dc: DataConnect): QueryPromise<AdminOnlyListAuditLogsData, undefined>;
+
 interface ListActiveCategoriesRef {
   /* Allow users to create refs without passing in DataConnect */
   (): QueryRef<ListActiveCategoriesData, undefined>;
@@ -1352,124 +1473,4 @@ export const deactivateMyDeviceTokenRef: DeactivateMyDeviceTokenRef;
 
 export function deactivateMyDeviceToken(vars: DeactivateMyDeviceTokenVariables): MutationPromise<DeactivateMyDeviceTokenData, DeactivateMyDeviceTokenVariables>;
 export function deactivateMyDeviceToken(dc: DataConnect, vars: DeactivateMyDeviceTokenVariables): MutationPromise<DeactivateMyDeviceTokenData, DeactivateMyDeviceTokenVariables>;
-
-interface AdminListAllCategoriesRef {
-  /* Allow users to create refs without passing in DataConnect */
-  (): QueryRef<AdminListAllCategoriesData, undefined>;
-  /* Allow users to pass in custom DataConnect instances */
-  (dc: DataConnect): QueryRef<AdminListAllCategoriesData, undefined>;
-  operationName: string;
-}
-export const adminListAllCategoriesRef: AdminListAllCategoriesRef;
-
-export function adminListAllCategories(): QueryPromise<AdminListAllCategoriesData, undefined>;
-export function adminListAllCategories(dc: DataConnect): QueryPromise<AdminListAllCategoriesData, undefined>;
-
-interface AdminListAllProductsRef {
-  /* Allow users to create refs without passing in DataConnect */
-  (vars?: AdminListAllProductsVariables): QueryRef<AdminListAllProductsData, AdminListAllProductsVariables>;
-  /* Allow users to pass in custom DataConnect instances */
-  (dc: DataConnect, vars?: AdminListAllProductsVariables): QueryRef<AdminListAllProductsData, AdminListAllProductsVariables>;
-  operationName: string;
-}
-export const adminListAllProductsRef: AdminListAllProductsRef;
-
-export function adminListAllProducts(vars?: AdminListAllProductsVariables): QueryPromise<AdminListAllProductsData, AdminListAllProductsVariables>;
-export function adminListAllProducts(dc: DataConnect, vars?: AdminListAllProductsVariables): QueryPromise<AdminListAllProductsData, AdminListAllProductsVariables>;
-
-interface AdminListOrdersRef {
-  /* Allow users to create refs without passing in DataConnect */
-  (vars?: AdminListOrdersVariables): QueryRef<AdminListOrdersData, AdminListOrdersVariables>;
-  /* Allow users to pass in custom DataConnect instances */
-  (dc: DataConnect, vars?: AdminListOrdersVariables): QueryRef<AdminListOrdersData, AdminListOrdersVariables>;
-  operationName: string;
-}
-export const adminListOrdersRef: AdminListOrdersRef;
-
-export function adminListOrders(vars?: AdminListOrdersVariables): QueryPromise<AdminListOrdersData, AdminListOrdersVariables>;
-export function adminListOrders(dc: DataConnect, vars?: AdminListOrdersVariables): QueryPromise<AdminListOrdersData, AdminListOrdersVariables>;
-
-interface AdminListCustomersRef {
-  /* Allow users to create refs without passing in DataConnect */
-  (): QueryRef<AdminListCustomersData, undefined>;
-  /* Allow users to pass in custom DataConnect instances */
-  (dc: DataConnect): QueryRef<AdminListCustomersData, undefined>;
-  operationName: string;
-}
-export const adminListCustomersRef: AdminListCustomersRef;
-
-export function adminListCustomers(): QueryPromise<AdminListCustomersData, undefined>;
-export function adminListCustomers(dc: DataConnect): QueryPromise<AdminListCustomersData, undefined>;
-
-interface AdminGetCustomerOrdersRef {
-  /* Allow users to create refs without passing in DataConnect */
-  (vars: AdminGetCustomerOrdersVariables): QueryRef<AdminGetCustomerOrdersData, AdminGetCustomerOrdersVariables>;
-  /* Allow users to pass in custom DataConnect instances */
-  (dc: DataConnect, vars: AdminGetCustomerOrdersVariables): QueryRef<AdminGetCustomerOrdersData, AdminGetCustomerOrdersVariables>;
-  operationName: string;
-}
-export const adminGetCustomerOrdersRef: AdminGetCustomerOrdersRef;
-
-export function adminGetCustomerOrders(vars: AdminGetCustomerOrdersVariables): QueryPromise<AdminGetCustomerOrdersData, AdminGetCustomerOrdersVariables>;
-export function adminGetCustomerOrders(dc: DataConnect, vars: AdminGetCustomerOrdersVariables): QueryPromise<AdminGetCustomerOrdersData, AdminGetCustomerOrdersVariables>;
-
-interface AdminListCouponsRef {
-  /* Allow users to create refs without passing in DataConnect */
-  (): QueryRef<AdminListCouponsData, undefined>;
-  /* Allow users to pass in custom DataConnect instances */
-  (dc: DataConnect): QueryRef<AdminListCouponsData, undefined>;
-  operationName: string;
-}
-export const adminListCouponsRef: AdminListCouponsRef;
-
-export function adminListCoupons(): QueryPromise<AdminListCouponsData, undefined>;
-export function adminListCoupons(dc: DataConnect): QueryPromise<AdminListCouponsData, undefined>;
-
-interface AdminListBannersRef {
-  /* Allow users to create refs without passing in DataConnect */
-  (): QueryRef<AdminListBannersData, undefined>;
-  /* Allow users to pass in custom DataConnect instances */
-  (dc: DataConnect): QueryRef<AdminListBannersData, undefined>;
-  operationName: string;
-}
-export const adminListBannersRef: AdminListBannersRef;
-
-export function adminListBanners(): QueryPromise<AdminListBannersData, undefined>;
-export function adminListBanners(dc: DataConnect): QueryPromise<AdminListBannersData, undefined>;
-
-interface AdminListStaffNotificationsRef {
-  /* Allow users to create refs without passing in DataConnect */
-  (): QueryRef<AdminListStaffNotificationsData, undefined>;
-  /* Allow users to pass in custom DataConnect instances */
-  (dc: DataConnect): QueryRef<AdminListStaffNotificationsData, undefined>;
-  operationName: string;
-}
-export const adminListStaffNotificationsRef: AdminListStaffNotificationsRef;
-
-export function adminListStaffNotifications(): QueryPromise<AdminListStaffNotificationsData, undefined>;
-export function adminListStaffNotifications(dc: DataConnect): QueryPromise<AdminListStaffNotificationsData, undefined>;
-
-interface AdminOnlyListSubAdminsRef {
-  /* Allow users to create refs without passing in DataConnect */
-  (): QueryRef<AdminOnlyListSubAdminsData, undefined>;
-  /* Allow users to pass in custom DataConnect instances */
-  (dc: DataConnect): QueryRef<AdminOnlyListSubAdminsData, undefined>;
-  operationName: string;
-}
-export const adminOnlyListSubAdminsRef: AdminOnlyListSubAdminsRef;
-
-export function adminOnlyListSubAdmins(): QueryPromise<AdminOnlyListSubAdminsData, undefined>;
-export function adminOnlyListSubAdmins(dc: DataConnect): QueryPromise<AdminOnlyListSubAdminsData, undefined>;
-
-interface AdminOnlyListAuditLogsRef {
-  /* Allow users to create refs without passing in DataConnect */
-  (): QueryRef<AdminOnlyListAuditLogsData, undefined>;
-  /* Allow users to pass in custom DataConnect instances */
-  (dc: DataConnect): QueryRef<AdminOnlyListAuditLogsData, undefined>;
-  operationName: string;
-}
-export const adminOnlyListAuditLogsRef: AdminOnlyListAuditLogsRef;
-
-export function adminOnlyListAuditLogs(): QueryPromise<AdminOnlyListAuditLogsData, undefined>;
-export function adminOnlyListAuditLogs(dc: DataConnect): QueryPromise<AdminOnlyListAuditLogsData, undefined>;
 

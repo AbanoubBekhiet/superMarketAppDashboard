@@ -22,6 +22,7 @@ export async function fetchOrders(params: OrdersQueryParams = {}): Promise<Order
 
   return mapped.filter(
     (order) =>
+      order.id.toLowerCase().includes(search) ||
       order.code.toLowerCase().includes(search) ||
       order.customerName.toLowerCase().includes(search),
   );

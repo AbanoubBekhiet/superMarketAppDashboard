@@ -5,10 +5,13 @@ export const notificationKeys = {
   all: ['notifications'] as const,
 };
 
-export function useNotifications() {
+export function useNotifications(enabled = true) {
   return useQuery({
     queryKey: notificationKeys.all,
     queryFn: fetchNotifications,
+    enabled,
+    refetchInterval: 8_000,
+    refetchOnWindowFocus: true,
   });
 }
 

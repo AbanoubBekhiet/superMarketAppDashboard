@@ -7,6 +7,126 @@ const connectorConfig = {
 };
 exports.connectorConfig = connectorConfig;
 
+const adminListAllCategoriesRef = (dc) => {
+  const { dc: dcInstance} = validateArgs(connectorConfig, dc, undefined);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'AdminListAllCategories');
+}
+adminListAllCategoriesRef.operationName = 'AdminListAllCategories';
+exports.adminListAllCategoriesRef = adminListAllCategoriesRef;
+
+exports.adminListAllCategories = function adminListAllCategories(dc) {
+  return executeQuery(adminListAllCategoriesRef(dc));
+};
+
+const adminListAllProductsRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'AdminListAllProducts', inputVars);
+}
+adminListAllProductsRef.operationName = 'AdminListAllProducts';
+exports.adminListAllProductsRef = adminListAllProductsRef;
+
+exports.adminListAllProducts = function adminListAllProducts(dcOrVars, vars) {
+  return executeQuery(adminListAllProductsRef(dcOrVars, vars));
+};
+
+const adminListOrdersRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'AdminListOrders', inputVars);
+}
+adminListOrdersRef.operationName = 'AdminListOrders';
+exports.adminListOrdersRef = adminListOrdersRef;
+
+exports.adminListOrders = function adminListOrders(dcOrVars, vars) {
+  return executeQuery(adminListOrdersRef(dcOrVars, vars));
+};
+
+const adminListCustomersRef = (dc) => {
+  const { dc: dcInstance} = validateArgs(connectorConfig, dc, undefined);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'AdminListCustomers');
+}
+adminListCustomersRef.operationName = 'AdminListCustomers';
+exports.adminListCustomersRef = adminListCustomersRef;
+
+exports.adminListCustomers = function adminListCustomers(dc) {
+  return executeQuery(adminListCustomersRef(dc));
+};
+
+const adminGetCustomerOrdersRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'AdminGetCustomerOrders', inputVars);
+}
+adminGetCustomerOrdersRef.operationName = 'AdminGetCustomerOrders';
+exports.adminGetCustomerOrdersRef = adminGetCustomerOrdersRef;
+
+exports.adminGetCustomerOrders = function adminGetCustomerOrders(dcOrVars, vars) {
+  return executeQuery(adminGetCustomerOrdersRef(dcOrVars, vars));
+};
+
+const adminListCouponsRef = (dc) => {
+  const { dc: dcInstance} = validateArgs(connectorConfig, dc, undefined);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'AdminListCoupons');
+}
+adminListCouponsRef.operationName = 'AdminListCoupons';
+exports.adminListCouponsRef = adminListCouponsRef;
+
+exports.adminListCoupons = function adminListCoupons(dc) {
+  return executeQuery(adminListCouponsRef(dc));
+};
+
+const adminListBannersRef = (dc) => {
+  const { dc: dcInstance} = validateArgs(connectorConfig, dc, undefined);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'AdminListBanners');
+}
+adminListBannersRef.operationName = 'AdminListBanners';
+exports.adminListBannersRef = adminListBannersRef;
+
+exports.adminListBanners = function adminListBanners(dc) {
+  return executeQuery(adminListBannersRef(dc));
+};
+
+const adminListStaffNotificationsRef = (dc) => {
+  const { dc: dcInstance} = validateArgs(connectorConfig, dc, undefined);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'AdminListStaffNotifications');
+}
+adminListStaffNotificationsRef.operationName = 'AdminListStaffNotifications';
+exports.adminListStaffNotificationsRef = adminListStaffNotificationsRef;
+
+exports.adminListStaffNotifications = function adminListStaffNotifications(dc) {
+  return executeQuery(adminListStaffNotificationsRef(dc));
+};
+
+const adminOnlyListSubAdminsRef = (dc) => {
+  const { dc: dcInstance} = validateArgs(connectorConfig, dc, undefined);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'AdminOnlyListSubAdmins');
+}
+adminOnlyListSubAdminsRef.operationName = 'AdminOnlyListSubAdmins';
+exports.adminOnlyListSubAdminsRef = adminOnlyListSubAdminsRef;
+
+exports.adminOnlyListSubAdmins = function adminOnlyListSubAdmins(dc) {
+  return executeQuery(adminOnlyListSubAdminsRef(dc));
+};
+
+const adminOnlyListAuditLogsRef = (dc) => {
+  const { dc: dcInstance} = validateArgs(connectorConfig, dc, undefined);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'AdminOnlyListAuditLogs');
+}
+adminOnlyListAuditLogsRef.operationName = 'AdminOnlyListAuditLogs';
+exports.adminOnlyListAuditLogsRef = adminOnlyListAuditLogsRef;
+
+exports.adminOnlyListAuditLogs = function adminOnlyListAuditLogs(dc) {
+  return executeQuery(adminOnlyListAuditLogsRef(dc));
+};
+
 const listActiveCategoriesRef = (dc) => {
   const { dc: dcInstance} = validateArgs(connectorConfig, dc, undefined);
   dcInstance._useGeneratedSdk();
@@ -437,124 +557,4 @@ exports.deactivateMyDeviceTokenRef = deactivateMyDeviceTokenRef;
 
 exports.deactivateMyDeviceToken = function deactivateMyDeviceToken(dcOrVars, vars) {
   return executeMutation(deactivateMyDeviceTokenRef(dcOrVars, vars));
-};
-
-const adminListAllCategoriesRef = (dc) => {
-  const { dc: dcInstance} = validateArgs(connectorConfig, dc, undefined);
-  dcInstance._useGeneratedSdk();
-  return queryRef(dcInstance, 'AdminListAllCategories');
-}
-adminListAllCategoriesRef.operationName = 'AdminListAllCategories';
-exports.adminListAllCategoriesRef = adminListAllCategoriesRef;
-
-exports.adminListAllCategories = function adminListAllCategories(dc) {
-  return executeQuery(adminListAllCategoriesRef(dc));
-};
-
-const adminListAllProductsRef = (dcOrVars, vars) => {
-  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars);
-  dcInstance._useGeneratedSdk();
-  return queryRef(dcInstance, 'AdminListAllProducts', inputVars);
-}
-adminListAllProductsRef.operationName = 'AdminListAllProducts';
-exports.adminListAllProductsRef = adminListAllProductsRef;
-
-exports.adminListAllProducts = function adminListAllProducts(dcOrVars, vars) {
-  return executeQuery(adminListAllProductsRef(dcOrVars, vars));
-};
-
-const adminListOrdersRef = (dcOrVars, vars) => {
-  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars);
-  dcInstance._useGeneratedSdk();
-  return queryRef(dcInstance, 'AdminListOrders', inputVars);
-}
-adminListOrdersRef.operationName = 'AdminListOrders';
-exports.adminListOrdersRef = adminListOrdersRef;
-
-exports.adminListOrders = function adminListOrders(dcOrVars, vars) {
-  return executeQuery(adminListOrdersRef(dcOrVars, vars));
-};
-
-const adminListCustomersRef = (dc) => {
-  const { dc: dcInstance} = validateArgs(connectorConfig, dc, undefined);
-  dcInstance._useGeneratedSdk();
-  return queryRef(dcInstance, 'AdminListCustomers');
-}
-adminListCustomersRef.operationName = 'AdminListCustomers';
-exports.adminListCustomersRef = adminListCustomersRef;
-
-exports.adminListCustomers = function adminListCustomers(dc) {
-  return executeQuery(adminListCustomersRef(dc));
-};
-
-const adminGetCustomerOrdersRef = (dcOrVars, vars) => {
-  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
-  dcInstance._useGeneratedSdk();
-  return queryRef(dcInstance, 'AdminGetCustomerOrders', inputVars);
-}
-adminGetCustomerOrdersRef.operationName = 'AdminGetCustomerOrders';
-exports.adminGetCustomerOrdersRef = adminGetCustomerOrdersRef;
-
-exports.adminGetCustomerOrders = function adminGetCustomerOrders(dcOrVars, vars) {
-  return executeQuery(adminGetCustomerOrdersRef(dcOrVars, vars));
-};
-
-const adminListCouponsRef = (dc) => {
-  const { dc: dcInstance} = validateArgs(connectorConfig, dc, undefined);
-  dcInstance._useGeneratedSdk();
-  return queryRef(dcInstance, 'AdminListCoupons');
-}
-adminListCouponsRef.operationName = 'AdminListCoupons';
-exports.adminListCouponsRef = adminListCouponsRef;
-
-exports.adminListCoupons = function adminListCoupons(dc) {
-  return executeQuery(adminListCouponsRef(dc));
-};
-
-const adminListBannersRef = (dc) => {
-  const { dc: dcInstance} = validateArgs(connectorConfig, dc, undefined);
-  dcInstance._useGeneratedSdk();
-  return queryRef(dcInstance, 'AdminListBanners');
-}
-adminListBannersRef.operationName = 'AdminListBanners';
-exports.adminListBannersRef = adminListBannersRef;
-
-exports.adminListBanners = function adminListBanners(dc) {
-  return executeQuery(adminListBannersRef(dc));
-};
-
-const adminListStaffNotificationsRef = (dc) => {
-  const { dc: dcInstance} = validateArgs(connectorConfig, dc, undefined);
-  dcInstance._useGeneratedSdk();
-  return queryRef(dcInstance, 'AdminListStaffNotifications');
-}
-adminListStaffNotificationsRef.operationName = 'AdminListStaffNotifications';
-exports.adminListStaffNotificationsRef = adminListStaffNotificationsRef;
-
-exports.adminListStaffNotifications = function adminListStaffNotifications(dc) {
-  return executeQuery(adminListStaffNotificationsRef(dc));
-};
-
-const adminOnlyListSubAdminsRef = (dc) => {
-  const { dc: dcInstance} = validateArgs(connectorConfig, dc, undefined);
-  dcInstance._useGeneratedSdk();
-  return queryRef(dcInstance, 'AdminOnlyListSubAdmins');
-}
-adminOnlyListSubAdminsRef.operationName = 'AdminOnlyListSubAdmins';
-exports.adminOnlyListSubAdminsRef = adminOnlyListSubAdminsRef;
-
-exports.adminOnlyListSubAdmins = function adminOnlyListSubAdmins(dc) {
-  return executeQuery(adminOnlyListSubAdminsRef(dc));
-};
-
-const adminOnlyListAuditLogsRef = (dc) => {
-  const { dc: dcInstance} = validateArgs(connectorConfig, dc, undefined);
-  dcInstance._useGeneratedSdk();
-  return queryRef(dcInstance, 'AdminOnlyListAuditLogs');
-}
-adminOnlyListAuditLogsRef.operationName = 'AdminOnlyListAuditLogs';
-exports.adminOnlyListAuditLogsRef = adminOnlyListAuditLogsRef;
-
-exports.adminOnlyListAuditLogs = function adminOnlyListAuditLogs(dc) {
-  return executeQuery(adminOnlyListAuditLogsRef(dc));
 };

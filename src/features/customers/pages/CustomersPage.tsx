@@ -1,11 +1,17 @@
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Pencil, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { legacyCreateColumnHelper, type LegacyColumnDef } from '@tanstack/react-table/legacy';
+import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
+import { z } from 'zod';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { DataTable } from '@/components/ui/DataTable';
+import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Select } from '@/components/ui/Select';
 import { EmptyState, ErrorState } from '@/components/ui/StateViews';
@@ -13,11 +19,22 @@ import { STRINGS } from '@/constants/strings';
 import {
   useCustomerOrders,
   useCustomers,
+  useDeleteCustomer,
+  useUpdateCustomer,
   useUpdateCustomerStatus,
 } from '@/features/customers/hooks/useCustomers';
 import { formatCurrency, formatNumber, formatShortDate } from '@/lib/format';
 import { getImageUrl } from '@/lib/images';
+import { isValidPhoneNumber } from '@/lib/phoneAuth';
 import type { User } from '@/types/domain';
+
+const editCustomerSchema = z.object({
+  fullName: z.string().trim().min(2, STRINGS.common.requiredField),
+  phone: z.string().trim().refine(isValidPhoneNumber, STRINGS.auth.phoneInvalid),
+  area: z.string().trim().min(2, STRINGS.common.requiredField),
+});
+
+type EditCustomerValues = z.infer<typeof editCustomerSchema>;
 
 const columnHelper = legacyCreateColumnHelper<User>();
 
@@ -25,6 +42,8 @@ export function CustomersPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'suspended'>('all');
   const [selectedCustomer, setSelectedCustomer] = useState<User | null>(null);
+  const [editingCustomer, setEditingCustomer] = useState<User | null>(null);
+  const [deletingCustomer, setDeletingCustomer] = useState<User | null>(null);
 
   const {
     data: customers = [],
@@ -36,13 +55,55 @@ export function CustomersPage() {
   const { data: customerOrders = [], isLoading: isOrdersLoading } = useCustomerOrders(
     selectedCustomer?.id ?? null,
   );
-  const { mutateAsync: updateStatus, isPending: isUpdating } = useUpdateCustomerStatus();
+  const { mutateAsync: updateStatus, isPending: isUpdatingStatus } = useUpdateCustomerStatus();
+  const { mutateAsync: updateCustomerMutate, isPending: isSavingEdit } = useUpdateCustomer();
+  const { mutateAsync: deleteCustomerMutate, isPending: isDeleting } = useDeleteCustomer();
+
+  const editForm = useForm<EditCustomerValues>({
+    resolver: zodResolver(editCustomerSchema),
+  });
 
   const handleToggleStatus = async (customer: User) => {
     const nextStatus = customer.status === 'active' ? 'suspended' : 'active';
     const updated = await updateStatus({ id: customer.id, status: nextStatus });
     setSelectedCustomer(updated);
     toast.success(STRINGS.customers.statusUpdatedToast);
+  };
+
+  const openEditModal = (customer: User) => {
+    setEditingCustomer(customer);
+    editForm.reset({
+      fullName: customer.name,
+      phone: customer.phone === 'غير مسجل' ? '' : customer.phone,
+      area: customer.area,
+    });
+  };
+
+  const handleSaveEdit = async (values: EditCustomerValues) => {
+    if (!editingCustomer) return;
+    try {
+      await updateCustomerMutate({ id: editingCustomer.id, payload: values });
+      toast.success(STRINGS.customers.updatedToast);
+      setEditingCustomer(null);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : STRINGS.common.errorMessage;
+      toast.error(msg || STRINGS.common.errorMessage);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingCustomer) return;
+    try {
+      await deleteCustomerMutate(deletingCustomer.id);
+      if (selectedCustomer?.id === deletingCustomer.id) {
+        setSelectedCustomer(null);
+      }
+      toast.success(STRINGS.customers.deletedToast);
+      setDeletingCustomer(null);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : STRINGS.common.errorMessage;
+      toast.error(msg || STRINGS.common.errorMessage);
+    }
   };
 
   const columns = useMemo(
@@ -132,18 +193,40 @@ export function CustomersPage() {
         columnHelper.display({
           id: 'actions',
           header: STRINGS.customers.columns.action,
-          cell: (info) => (
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-primary"
-              onClick={() => setSelectedCustomer(info.row.original)}
-            >
-              {STRINGS.customers.viewHistoryBtn}
-            </Button>
-          ),
+          cell: (info) => {
+            const customer = info.row.original;
+            return (
+              <div className="flex items-center gap-xs">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-primary"
+                  onClick={() => setSelectedCustomer(customer)}
+                >
+                  {STRINGS.customers.viewHistoryBtn}
+                </Button>
+                <button
+                  type="button"
+                  aria-label={STRINGS.common.edit}
+                  onClick={() => openEditModal(customer)}
+                  className="w-8 h-8 rounded-md bg-surface border border-outline-subtle text-primary hover:bg-mint-surface flex items-center justify-center transition-colors duration-state-change"
+                >
+                  <Pencil className="w-4 h-4" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  aria-label={STRINGS.common.delete}
+                  onClick={() => setDeletingCustomer(customer)}
+                  className="w-8 h-8 rounded-md bg-surface border border-outline-subtle text-error hover:bg-error-container flex items-center justify-center transition-colors duration-state-change"
+                >
+                  <Trash2 className="w-4 h-4" aria-hidden="true" />
+                </button>
+              </div>
+            );
+          },
         }),
       ] as LegacyColumnDef<User, unknown>[],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
 
@@ -182,6 +265,64 @@ export function CustomersPage() {
         )}
       </Card>
 
+      {/* Edit Customer Modal */}
+      <Modal
+        open={editingCustomer !== null}
+        onClose={() => setEditingCustomer(null)}
+        title={STRINGS.customers.editModalTitle}
+        maxWidthClass="max-w-md"
+      >
+        <form
+          onSubmit={editForm.handleSubmit(handleSaveEdit)}
+          className="flex flex-col gap-md"
+          noValidate
+        >
+          <Input
+            label={STRINGS.customers.nameLabel}
+            error={editForm.formState.errors.fullName?.message}
+            {...editForm.register('fullName')}
+          />
+          <Input
+            label={STRINGS.customers.phoneLabel}
+            type="tel"
+            dir="ltr"
+            error={editForm.formState.errors.phone?.message}
+            {...editForm.register('phone')}
+          />
+          <Input
+            label={STRINGS.customers.areaLabel}
+            error={editForm.formState.errors.area?.message}
+            {...editForm.register('area')}
+          />
+          <div className="flex items-center gap-sm pt-sm">
+            <Button type="submit" variant="primary" size="lg" isLoading={isSavingEdit} className="flex-1">
+              {STRINGS.common.save}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              onClick={() => setEditingCustomer(null)}
+            >
+              {STRINGS.common.cancel}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Delete Customer Confirm Modal */}
+      <ConfirmModal
+        open={deletingCustomer !== null}
+        onClose={() => setDeletingCustomer(null)}
+        onConfirm={handleConfirmDelete}
+        isLoading={isDeleting}
+        message={
+          deletingCustomer
+            ? `هل أنت متأكد من حذف العميل «${deletingCustomer.name}»؟ ${STRINGS.customers.confirmDeleteMsg}`
+            : STRINGS.common.confirmDeleteGeneric
+        }
+      />
+
       {/* Customer Orders History Modal */}
       <Modal
         open={selectedCustomer !== null}
@@ -206,7 +347,7 @@ export function CustomersPage() {
               <Button
                 variant={selectedCustomer.status === 'active' ? 'danger' : 'mint-outline'}
                 size="sm"
-                isLoading={isUpdating}
+                isLoading={isUpdatingStatus}
                 onClick={() => handleToggleStatus(selectedCustomer)}
               >
                 {STRINGS.customers.toggleStatusBtn}
@@ -227,8 +368,8 @@ export function CustomersPage() {
                     className="py-md flex items-center justify-between gap-md"
                   >
                     <div className="flex flex-col gap-xs">
-                      <span className="font-title text-title-sm text-on-surface tabular-nums">
-                        {order.code}
+                      <span dir="ltr" className="inline-block font-title text-title-sm text-on-surface tabular-nums">
+                        #{order.id.slice(0, 8)}
                       </span>
                       <span className="font-body text-body-sm text-on-surface-subtle">
                         {formatShortDate(order.createdAt)} •{' '}

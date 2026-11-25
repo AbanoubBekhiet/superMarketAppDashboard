@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { flexRender } from '@tanstack/react-table';
 import {
   getCoreRowModel,
-  getPaginationRowModel,
   getSortedRowModel,
   useLegacyTable,
   type LegacyColumnDef,
 } from '@tanstack/react-table/legacy';
-import { ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowUpDown } from 'lucide-react';
 import { STRINGS } from '@/constants/strings';
+import { useInfiniteSlice } from '@/hooks/useInfiniteSlice';
 import { formatNumber } from '@/lib/format';
 import { EmptyState, TableSkeleton } from './StateViews';
 
@@ -16,7 +16,7 @@ interface DataTableProps<TData extends object> {
   data: TData[];
   columns: LegacyColumnDef<TData, unknown>[];
   isLoading?: boolean;
-  pageSize?: number;
+  batchSize?: number;
   emptyTitle?: string;
 }
 
@@ -24,7 +24,7 @@ export function DataTable<TData extends object>({
   data,
   columns,
   isLoading = false,
-  pageSize = 8,
+  batchSize = 15,
   emptyTitle = STRINGS.common.emptyTitle,
 }: DataTableProps<TData>) {
   const [sorting, setSorting] = useState<Array<{ id: string; desc: boolean }>>([]);
@@ -36,10 +36,20 @@ export function DataTable<TData extends object>({
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: { pageIndex: 0, pageSize },
-    },
+  });
+
+  const sortedRows = table.getRowModel().rows;
+  const {
+    visibleItems: visibleRows,
+    hasMore,
+    loadMore,
+    sentinelRef,
+    totalCount,
+  } = useInfiniteSlice({
+    items: sortedRows,
+    initialCount: batchSize,
+    step: batchSize,
+    resetKey: data.length,
   });
 
   if (isLoading) {
@@ -49,9 +59,6 @@ export function DataTable<TData extends object>({
   if (data.length === 0) {
     return <EmptyState title={emptyTitle} />;
   }
-
-  const pageCount = table.getPageCount();
-  const currentPage = table.getState().pagination.pageIndex + 1;
 
   return (
     <div className="flex flex-col">
@@ -86,7 +93,7 @@ export function DataTable<TData extends object>({
             ))}
           </thead>
           <tbody className="divide-y divide-outline-subtle">
-            {table.getRowModel().rows.map((row) => (
+            {visibleRows.map((row) => (
               <tr
                 key={row.id}
                 className="hover:bg-surface transition-colors duration-state-change"
@@ -102,34 +109,25 @@ export function DataTable<TData extends object>({
         </table>
       </div>
 
-      {pageCount > 1 ? (
-        <div className="flex items-center justify-between px-base py-md border-t border-outline-subtle bg-surface">
-          <span className="font-body text-body-sm text-on-surface-muted tabular-nums">
-            {STRINGS.common.pageOf} {formatNumber(currentPage)} {STRINGS.common.from}{' '}
-            {formatNumber(pageCount)}
-          </span>
-          <div className="flex items-center gap-xs">
-            <button
-              type="button"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="inline-flex items-center gap-xs px-md py-xs rounded-md bg-surface-card border border-outline-subtle text-on-surface font-label text-label-sm disabled:opacity-40"
-            >
-              <ChevronRight className="w-4 h-4" aria-hidden="true" />
-              <span>{STRINGS.common.previous}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-              className="inline-flex items-center gap-xs px-md py-xs rounded-md bg-surface-card border border-outline-subtle text-on-surface font-label text-label-sm disabled:opacity-40"
-            >
-              <span>{STRINGS.common.next}</span>
-              <ChevronLeft className="w-4 h-4" aria-hidden="true" />
-            </button>
-          </div>
-        </div>
-      ) : null}
+      {/* Infinite Scroll Sentinel / Status Footer */}
+      <div
+        ref={sentinelRef}
+        className="flex items-center justify-between px-base py-sm border-t border-outline-subtle bg-surface"
+      >
+        <span className="font-body text-body-sm text-on-surface-muted tabular-nums">
+          {STRINGS.common.showingCount} {formatNumber(visibleRows.length)} {STRINGS.common.from}{' '}
+          {formatNumber(totalCount)}
+        </span>
+        {hasMore ? (
+          <button
+            type="button"
+            onClick={loadMore}
+            className="px-md py-xs rounded-md bg-surface-card border border-outline-subtle text-primary font-label text-label-sm hover:bg-mint-surface transition-colors duration-state-change"
+          >
+            {STRINGS.common.loadMore}
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }

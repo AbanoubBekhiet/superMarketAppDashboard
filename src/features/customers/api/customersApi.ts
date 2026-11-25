@@ -28,6 +28,10 @@ export async function fetchCustomers(params: CustomersQueryParams = {}): Promise
   });
 }
 
+function sameUuid(a: string, b: string): boolean {
+  return a.replace(/-/g, '').toLowerCase() === b.replace(/-/g, '').toLowerCase();
+}
+
 export async function updateCustomerStatus(
   id: string,
   status: UserAccountStatus,
@@ -37,9 +41,38 @@ export async function updateCustomerStatus(
     { customerId: id, isActive: status === 'active' },
   );
   const customers = await fetchCustomers({});
-  const updated = customers.find((c) => c.id === id);
+  const updated = customers.find((c) => sameUuid(c.id, id));
   if (!updated) throw new Error('العميل غير موجود');
   return updated;
+}
+
+export interface UpdateCustomerPayload {
+  fullName: string;
+  phone: string;
+  area: string;
+}
+
+export async function updateCustomer(id: string, payload: UpdateCustomerPayload): Promise<User> {
+  await callFunction<
+    { customerId: string; fullName: string; phone: string; area: string },
+    { id: string; updated: boolean }
+  >('updateCustomerByStaff', {
+    customerId: id,
+    fullName: payload.fullName,
+    phone: payload.phone,
+    area: payload.area,
+  });
+  const customers = await fetchCustomers({});
+  const updated = customers.find((c) => sameUuid(c.id, id));
+  if (updated) return updated;
+  throw new Error('تعذر جلب بيانات العميل بعد التحديث');
+}
+
+export async function deleteCustomer(id: string): Promise<void> {
+  await callFunction<{ customerId: string }, { id: string; deleted: boolean }>(
+    'softDeleteCustomer',
+    { customerId: id },
+  );
 }
 
 export async function fetchCustomerOrders(customerId: string): Promise<Order[]> {

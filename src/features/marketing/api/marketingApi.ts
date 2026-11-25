@@ -66,6 +66,10 @@ export async function upsertBanner(payload: {
   await callFunction('upsertBanner', payload);
 }
 
+export async function deleteBanner(id: string): Promise<void> {
+  await callFunction('softDeleteBanner', { id });
+}
+
 export async function fetchAppSettings(): Promise<AppSettingItem[]> {
   const { data } = await listAppSettings(dataConnect);
   return data.appSettings.map((s) => ({

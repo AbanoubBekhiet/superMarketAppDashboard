@@ -98,6 +98,9 @@ export interface Product {
   imageKey: string;
   unitLabel: string;
   price: number;
+  regularPrice?: number;
+  salePrice?: number | null;
+  purchasePrice?: number | null;
   oldPrice?: number;
   discountPercent?: number;
   stock: number;

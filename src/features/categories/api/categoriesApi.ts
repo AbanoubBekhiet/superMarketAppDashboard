@@ -10,6 +10,10 @@ export interface CategoryUpsertPayload {
   imageUrl?: string | null;
 }
 
+function sameUuid(a: string, b: string): boolean {
+  return a.replace(/-/g, '').toLowerCase() === b.replace(/-/g, '').toLowerCase();
+}
+
 export async function fetchCategories(search?: string): Promise<Category[]> {
   const { data } = await adminListAllCategories(dataConnect);
   const mapped = mapCategories(data.categories);
@@ -31,9 +35,19 @@ export async function createCategory(payload: CategoryUpsertPayload): Promise<Ca
     imageUrl: payload.imageUrl ?? 'local://cat-vegetables',
   });
   const list = await fetchCategories();
-  const created = list.find((c) => c.id === id);
-  if (!created) throw new Error('تعذر جلب القسم بعد الإنشاء');
-  return created;
+  const created = list.find((c) => sameUuid(c.id, id));
+  if (created) return created;
+
+  return {
+    id: id.replace(/-/g, ''),
+    parentId: payload.parentId ?? null,
+    name: payload.name,
+    imageKey: payload.imageUrl ?? 'local://cat-vegetables',
+    productCount: 0,
+    sortOrder: 0,
+    isActive: payload.isActive,
+    subcategories: [],
+  };
 }
 
 export async function updateCategory(
@@ -41,11 +55,11 @@ export async function updateCategory(
   payload: Partial<CategoryUpsertPayload>,
 ): Promise<Category> {
   const list = await fetchCategories();
-  const current = list.find((c) => c.id === id);
+  const current = list.find((c) => sameUuid(c.id, id));
   if (!current) throw new Error('القسم غير موجود');
 
   await callFunction<Record<string, unknown>, { id: string }>('upsertCategory', {
-    id,
+    id: current.id,
     name: payload.name ?? current.name,
     isActive: payload.isActive ?? current.isActive,
     parentId: payload.parentId ?? current.parentId ?? null,
@@ -54,9 +68,11 @@ export async function updateCategory(
   });
 
   const updatedList = await fetchCategories();
-  const updated = updatedList.find((c) => c.id === id);
-  if (!updated) throw new Error('القسم غير موجود');
-  return updated;
+  return updatedList.find((c) => sameUuid(c.id, id)) ?? {
+    ...current,
+    name: payload.name ?? current.name,
+    isActive: payload.isActive ?? current.isActive,
+  };
 }
 
 export async function deleteCategory(id: string): Promise<void> {

@@ -1,16 +1,20 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Bell,
+  BellRing,
   FolderTree,
   LayoutDashboard,
   Leaf,
   LogOut,
-  Megaphone,
   Menu,
   Package,
   ReceiptText,
   Search,
+  Settings,
   ShieldCheck,
+  Tag,
+  TicketPercent,
   Users,
   X,
 } from 'lucide-react';
@@ -18,10 +22,13 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/Badge';
 import { STRINGS } from '@/constants/strings';
+import { customerKeys } from '@/features/customers/hooks/useCustomers';
 import {
   useMarkAllNotificationsRead,
   useNotifications,
 } from '@/features/notifications/hooks/useNotifications';
+import { orderKeys } from '@/features/orders/hooks/useOrders';
+import { overviewKeys } from '@/features/overview/hooks/useOverview';
 import { formatNumber } from '@/lib/format';
 import { useWebAuthStore } from '@/store/authStore';
 
@@ -39,7 +46,10 @@ const STAFF_NAV_ITEMS = [
   { to: '/products', label: STRINGS.sidebar.products, icon: Package, adminOnly: false },
   { to: '/categories', label: STRINGS.sidebar.categories, icon: FolderTree, adminOnly: false },
   { to: '/customers', label: STRINGS.sidebar.customers, icon: Users, adminOnly: false },
-  { to: '/marketing', label: STRINGS.sidebar.marketing, icon: Megaphone, adminOnly: false },
+  { to: '/offers', label: STRINGS.sidebar.offers, icon: Tag, adminOnly: false },
+  { to: '/coupons', label: STRINGS.sidebar.coupons, icon: TicketPercent, adminOnly: false },
+  { to: '/notifications', label: STRINGS.sidebar.notifications, icon: BellRing, adminOnly: false },
+  { to: '/store-settings', label: STRINGS.sidebar.storeSettings, icon: Settings, adminOnly: false },
   { to: '/sub-admins', label: STRINGS.sidebar.subAdmins, icon: ShieldCheck, adminOnly: true },
 ] as const;
 
@@ -53,12 +63,38 @@ export function AdminLayout({
   const user = useWebAuthStore((s) => s.user);
   const logout = useWebAuthStore((s) => s.logout);
   const navigate = useNavigate();
+  const qc = useQueryClient();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const seenNotifIdsRef = useRef<Set<string> | null>(null);
 
-  const { data: notifications = [] } = useNotifications();
+  const isStaffSession = Boolean(
+    user && (user.role === 'admin' || user.role === 'sub_admin') && user.isActive,
+  );
+  const { data: notifications = [] } = useNotifications(isStaffSession);
   const { mutate: markAllRead } = useMarkAllNotificationsRead();
+
+  useEffect(() => {
+    if (!isStaffSession || notifications.length === 0) return;
+    if (seenNotifIdsRef.current === null) {
+      seenNotifIdsRef.current = new Set(notifications.map((n) => n.id));
+      return;
+    }
+
+    const unseenNew = notifications.filter(
+      (n) => !n.isRead && !seenNotifIdsRef.current?.has(n.id),
+    );
+    notifications.forEach((n) => seenNotifIdsRef.current?.add(n.id));
+
+    if (unseenNew.length > 0) {
+      const latest = unseenNew[0];
+      toast.info(`${latest.title}: ${latest.body}`);
+      void qc.invalidateQueries({ queryKey: orderKeys.all });
+      void qc.invalidateQueries({ queryKey: customerKeys.all });
+      void qc.invalidateQueries({ queryKey: overviewKeys.all });
+    }
+  }, [isStaffSession, notifications, qc]);
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 

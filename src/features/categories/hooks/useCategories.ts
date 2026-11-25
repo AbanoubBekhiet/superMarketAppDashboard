@@ -24,8 +24,9 @@ export function useCreateCategory() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (payload: CategoryUpsertPayload) => createCategory(payload),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: categoryKeys.all });
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: categoryKeys.all });
+      await qc.refetchQueries({ queryKey: categoryKeys.all });
       qc.invalidateQueries({ queryKey: overviewKeys.all });
     },
   });
@@ -36,8 +37,9 @@ export function useUpdateCategory() {
   return useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: Partial<CategoryUpsertPayload> }) =>
       updateCategory(id, payload),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: categoryKeys.all });
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: categoryKeys.all });
+      await qc.refetchQueries({ queryKey: categoryKeys.all });
     },
   });
 }
