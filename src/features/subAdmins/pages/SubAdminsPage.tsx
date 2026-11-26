@@ -95,13 +95,18 @@ export function SubAdminsPage() {
   }, [members, search]);
 
   const handleCreate = async (values: CreateFormValues) => {
-    await createMutate({
-      ...values,
-      email: values.email?.trim() ? values.email.trim() : null,
-    });
-    toast.success(STRINGS.subAdmins.createdToast);
-    createForm.reset();
-    setCreateOpen(false);
+    try {
+      await createMutate({
+        ...values,
+        email: values.email?.trim() ? values.email.trim() : null,
+      });
+      toast.success(STRINGS.subAdmins.createdToast);
+      createForm.reset();
+      setCreateOpen(false);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : STRINGS.common.errorMessage;
+      toast.error(msg || STRINGS.common.errorMessage);
+    }
   };
 
   const openEdit = (member: User) => {
@@ -116,17 +121,27 @@ export function SubAdminsPage() {
 
   const handleEdit = async (values: EditFormValues) => {
     if (!editingMember) return;
-    await updateMutate({ userId: editingMember.id, ...values });
-    toast.success(STRINGS.subAdmins.updatedToast);
-    setEditingMember(null);
+    try {
+      await updateMutate({ userId: editingMember.id, ...values });
+      toast.success(STRINGS.subAdmins.updatedToast);
+      setEditingMember(null);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : STRINGS.common.errorMessage;
+      toast.error(msg || STRINGS.common.errorMessage);
+    }
   };
 
   const handleResetPassword = async () => {
     if (!resetTarget || newPasswordInput.length < 8) return;
-    await resetPasswordMutate({ userId: resetTarget.id, newPassword: newPasswordInput });
-    toast.success(STRINGS.subAdmins.passwordResetToast);
-    setResetTarget(null);
-    setNewPasswordInput('');
+    try {
+      await resetPasswordMutate({ userId: resetTarget.id, newPassword: newPasswordInput });
+      toast.success(STRINGS.subAdmins.passwordResetToast);
+      setResetTarget(null);
+      setNewPasswordInput('');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : STRINGS.common.errorMessage;
+      toast.error(msg || STRINGS.common.errorMessage);
+    }
   };
 
   return (

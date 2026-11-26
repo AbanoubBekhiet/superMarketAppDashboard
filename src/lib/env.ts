@@ -9,8 +9,9 @@ interface FirebaseEnvConfig {
 
 interface AppEnv {
   firebase: FirebaseEnvConfig;
-  useEmulators: boolean;
-  emulatorHost: string;
+  onesignalAppId: string;
+  onesignalRestApiKey: string;
+  r2UploadUrl: string;
 }
 
 export const env: AppEnv = {
@@ -22,6 +23,7 @@ export const env: AppEnv = {
     messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID ?? '',
     appId: import.meta.env.VITE_FIREBASE_APP_ID ?? '',
   },
-  useEmulators: import.meta.env.VITE_USE_EMULATORS === 'true',
-  emulatorHost: import.meta.env.VITE_EMULATOR_HOST ?? '127.0.0.1',
+  onesignalAppId: import.meta.env.VITE_ONESIGNAL_APP_ID ?? '',
+  onesignalRestApiKey: import.meta.env.VITE_ONESIGNAL_REST_API_KEY ?? '',
+  r2UploadUrl: import.meta.env.VITE_R2_UPLOAD_URL ?? '',
 };

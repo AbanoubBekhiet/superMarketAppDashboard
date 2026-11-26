@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Leaf, Lock, Phone } from 'lucide-react';
+import { Lock, Phone } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { STRINGS } from '@/constants/strings';
 import { useAdminLogin } from '@/features/auth/hooks/useAuth';
-import { env } from '@/lib/env';
+import { getImageUrl } from '@/lib/images';
 import { isValidPhoneNumber } from '@/lib/phoneAuth';
 import { useWebAuthStore } from '@/store/authStore';
 
@@ -27,13 +27,12 @@ export function LoginPage() {
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      phone: env.useEmulators ? '01000000001' : '',
-      password: env.useEmulators ? 'Admin123!' : '',
+      phone: '',
+      password: '',
     },
   });
 
@@ -55,9 +54,11 @@ export function LoginPage() {
     <div className="min-h-screen bg-surface flex items-center justify-center p-xl">
       <div className="w-full max-w-md flex flex-col gap-xl">
         <div className="flex flex-col items-center text-center gap-sm">
-          <div className="w-14 h-14 rounded-lg bg-primary text-on-primary flex items-center justify-center shadow-card">
-            <Leaf className="w-7 h-7" aria-hidden="true" />
-          </div>
+          <img
+            src={getImageUrl('local://logo')}
+            alt={STRINGS.brand.name}
+            className="w-16 h-16 rounded-xl object-cover border border-outline-subtle shadow-card"
+          />
           <h1 className="font-headline text-headline-lg text-on-surface">{STRINGS.auth.loginTitle}</h1>
           <p className="font-body text-body-md text-on-surface-muted">{STRINGS.auth.loginSubtitle}</p>
         </div>
@@ -87,34 +88,7 @@ export function LoginPage() {
               {STRINGS.auth.loginButton}
             </Button>
 
-            {env.useEmulators ? (
-              <div className="flex flex-col gap-xs pt-xs border-t border-outline-subtle">
-                <Button
-                  type="button"
-                  variant="mint"
-                  size="sm"
-                  disabled={isPending}
-                  onClick={() => {
-                    setValue('phone', '01000000001');
-                    setValue('password', 'Admin123!');
-                  }}
-                >
-                  {STRINGS.auth.demoAdminButton}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={isPending}
-                  onClick={() => {
-                    setValue('phone', '01000000002');
-                    setValue('password', 'SubAdmin123!');
-                  }}
-                >
-                  {STRINGS.auth.demoSubAdminButton}
-                </Button>
-              </div>
-            ) : null}
+
           </form>
         </Card>
       </div>

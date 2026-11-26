@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Pencil, Trash2 } from 'lucide-react';
+import { MapPin, Pencil, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { legacyCreateColumnHelper, type LegacyColumnDef } from '@tanstack/react-table/legacy';
 import { useForm } from 'react-hook-form';
@@ -155,17 +155,28 @@ export function CustomersPage() {
             <span className="font-body text-body-sm text-on-surface">{info.getValue()}</span>
           ),
         }),
-        columnHelper.accessor('ordersCount', {
-          header: STRINGS.customers.columns.ordersHistory,
+        columnHelper.display({
+          id: 'location',
+          header: STRINGS.customers.columns.location,
           cell: (info) => {
-            const customer = info.row.original;
+            const { latitude, longitude } = info.row.original;
+            if (latitude == null || longitude == null) {
+              return (
+                <span className="font-body text-body-sm text-on-surface-subtle">
+                  {STRINGS.customers.noLocationLabel}
+                </span>
+              );
+            }
             return (
-              <span className="font-body text-body-sm text-on-surface tabular-nums">
-                {formatNumber(info.getValue())} {STRINGS.customers.ordersCountSuffix}
-                {customer.lastOrderCode
-                  ? ` (${STRINGS.customers.lastOrderPrefix} ${customer.lastOrderCode})`
-                  : ''}
-              </span>
+              <a
+                href={`https://www.google.com/maps?q=${latitude},${longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-xs font-label text-label-sm text-primary hover:underline"
+              >
+                <MapPin className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                <span>{STRINGS.customers.openMapLabel}</span>
+              </a>
             );
           },
         }),
@@ -343,6 +354,19 @@ export function CustomersPage() {
                 <span dir="ltr" className="font-body text-body-md text-on-surface tabular-nums">
                   {selectedCustomer.phone}
                 </span>
+                {selectedCustomer.latitude != null && selectedCustomer.longitude != null ? (
+                  <a
+                    href={`https://www.google.com/maps?q=${selectedCustomer.latitude},${selectedCustomer.longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-xs font-label text-label-sm text-primary hover:underline"
+                  >
+                    <MapPin className="w-3.5 h-3.5" aria-hidden="true" />
+                    <span dir="ltr" className="tabular-nums">
+                      {selectedCustomer.latitude.toFixed(5)}, {selectedCustomer.longitude.toFixed(5)}
+                    </span>
+                  </a>
+                ) : null}
               </div>
               <Button
                 variant={selectedCustomer.status === 'active' ? 'danger' : 'mint-outline'}

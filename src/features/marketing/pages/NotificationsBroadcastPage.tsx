@@ -23,13 +23,19 @@ export function NotificationsBroadcastPage() {
       return;
     }
     try {
-      await sendBroadcast({
+      const res = await sendBroadcast({
         audience,
         title: notifTitle.trim(),
         body: notifBody.trim(),
         type: 'promotion',
       });
-      toast.success(STRINGS.marketing.broadcastSentToast);
+      if (res.pushOk) {
+        toast.success(STRINGS.marketing.broadcastSentToast);
+      } else {
+        toast.warning(
+          `تم حفظ الإشعار داخل التطبيق، لكن لم يُرسل Push: ${res.pushError ?? 'تأكد من إعداد OneSignal وتوفر أجهزة مشتركه'}`,
+        );
+      }
       setNotifTitle('');
       setNotifBody('');
     } catch (err) {

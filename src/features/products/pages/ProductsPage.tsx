@@ -17,7 +17,8 @@ import { Select } from '@/components/ui/Select';
 import { ErrorState } from '@/components/ui/StateViews';
 import { STRINGS } from '@/constants/strings';
 import { useCategories } from '@/features/categories/hooks/useCategories';
-import { uploadProductImage } from '@/features/products/api/productsApi';
+import { reserveProductId, uploadProductImage } from '@/features/products/api/productsApi';
+import { deleteStorageImage } from '@/services/firebase/app';
 import {
   useCreateProduct,
   useDeleteProduct,
@@ -51,10 +52,12 @@ export function ProductsPage() {
   const [showPurchasePrice, setShowPurchasePrice] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [draftProductId, setDraftProductId] = useState<string>('');
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [fileInputKey, setFileInputKey] = useState(0);
 
   useEffect(() => {
     return () => {
@@ -107,11 +110,13 @@ export function ProductsPage() {
       if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
       return null;
     });
+    setFileInputKey((k) => k + 1);
   }, []);
 
   const openAddModal = useCallback(() => {
     clearPreview();
     setEditingProduct(null);
+    setDraftProductId(reserveProductId());
     setUploadedImageUrl(null);
     const defaultCat = categoryFilter !== 'all' ? categoryFilter : (categories[0]?.id ?? '');
     reset({
@@ -128,6 +133,7 @@ export function ProductsPage() {
     (product: Product) => {
       clearPreview();
       setEditingProduct(product);
+      setDraftProductId(product.id);
       setUploadedImageUrl(product.imageKey);
       reset({
         name: product.name,
@@ -144,11 +150,19 @@ export function ProductsPage() {
     [clearPreview, reset],
   );
 
-  const handleCloseModal = () => {
+  const closeModalOnly = () => {
     clearPreview();
     setModalOpen(false);
     setEditingProduct(null);
+    setDraftProductId('');
     setUploadedImageUrl(null);
+  };
+
+  const handleCloseModal = () => {
+    if (uploadedImageUrl && uploadedImageUrl !== editingProduct?.imageKey) {
+      void deleteStorageImage(uploadedImageUrl).catch(() => undefined);
+    }
+    closeModalOnly();
   };
 
   const handleConfirmDelete = async () => {
@@ -186,18 +200,38 @@ export function ProductsPage() {
       return blobUrl;
     });
     setIsUploadingImage(true);
+    const previousDraftUpload =
+      uploadedImageUrl && uploadedImageUrl !== editingProduct?.imageKey
+        ? uploadedImageUrl
+        : null;
     try {
-      const url = await uploadProductImage(editingProduct?.name ?? 'product', file);
+      const targetId = editingProduct?.id || draftProductId || reserveProductId();
+      if (!draftProductId && !editingProduct?.id) {
+        setDraftProductId(targetId);
+      }
+      const url = await uploadProductImage(targetId, file);
+      if (previousDraftUpload && previousDraftUpload !== url) {
+        void deleteStorageImage(previousDraftUpload).catch(() => undefined);
+      }
       setUploadedImageUrl(url);
       toast.success(STRINGS.common.imageUploaded);
-    } catch {
-      toast.error(STRINGS.common.errorTitle);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : STRINGS.common.errorTitle;
+      toast.error(msg || STRINGS.common.errorTitle);
+      setLocalPreviewUrl((prev) => {
+        if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
+        return null;
+      });
     } finally {
       setIsUploadingImage(false);
     }
   };
 
   const onSubmit = async (values: ProductFormValues) => {
+    if (isUploadingImage) {
+      toast.info(STRINGS.common.uploadingImage);
+      return;
+    }
     const resolvedCategoryId = values.categoryId || categories[0]?.id;
     if (!resolvedCategoryId) {
       toast.error(STRINGS.common.requiredField);
@@ -208,13 +242,15 @@ export function ProductsPage() {
         ? values.purchasePrice
         : null;
     try {
+      const finalImageUrl = uploadedImageUrl ?? editingProduct?.imageKey;
       const payload = {
+        id: editingProduct?.id || draftProductId || undefined,
         name: values.name,
         categoryId: resolvedCategoryId,
         price: values.price,
         purchasePrice: parsedPurchase,
         isActive: values.isActive,
-        imageUrl: uploadedImageUrl ?? editingProduct?.imageKey,
+        imageUrl: finalImageUrl,
       };
       if (editingProduct) {
         await updateProduct({ id: editingProduct.id, payload });
@@ -222,7 +258,7 @@ export function ProductsPage() {
         await createProduct(payload);
       }
       toast.success(STRINGS.products.savedToast);
-      handleCloseModal();
+      closeModalOnly();
     } catch (err) {
       const msg = err instanceof Error ? err.message : STRINGS.common.errorMessage;
       toast.error(msg || STRINGS.common.errorMessage);
@@ -341,7 +377,7 @@ export function ProductsPage() {
     [handleEdit, handleToggleActive, showPurchasePrice],
   );
 
-  const previewImageSrc = localPreviewUrl ?? (uploadedImageUrl ? getImageUrl(uploadedImageUrl) : null);
+  const previewImageSrc = localPreviewUrl ?? getImageUrl(uploadedImageUrl ?? 'local://logo');
 
   return (
     <AdminLayout
@@ -475,6 +511,7 @@ export function ProductsPage() {
               ) : null}
               <div className="flex-1 flex flex-col gap-xs">
                 <input
+                  key={fileInputKey}
                   type="file"
                   accept="image/*"
                   onChange={handleFileChange}
@@ -495,7 +532,8 @@ export function ProductsPage() {
               type="submit"
               variant="primary"
               size="lg"
-              isLoading={isCreating || isUpdating}
+              disabled={isUploadingImage}
+              isLoading={isCreating || isUpdating || isUploadingImage}
               className="flex-1"
             >
               {STRINGS.products.saveButton}

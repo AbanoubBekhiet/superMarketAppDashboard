@@ -1,6 +1,12 @@
-import { adminListOrders } from '@/dataconnect-generated';
-import { callFunction, dataConnect } from '@/services/firebase/app';
-import { mapOrder } from '@/services/firebase/mappers';
+import { collection, doc, getDoc, getDocs, orderBy, query, updateDoc } from 'firebase/firestore';
+import { firestoreDb } from '@/services/firebase/app';
+import { mapOrder, type FirestoreOrderDoc } from '@/services/firebase/mappers';
+import {
+  buildOrderStatusNotification,
+  notifyCustomerAndPush,
+  recordAuditLog,
+} from '@/services/notifications/dispatcher';
+import { useWebAuthStore } from '@/store/authStore';
 import type { Order, OrderStatus } from '@/types/domain';
 
 export interface OrdersQueryParams {
@@ -10,13 +16,19 @@ export interface OrdersQueryParams {
 }
 
 export async function fetchOrders(params: OrdersQueryParams = {}): Promise<Order[]> {
-  const { data } = await adminListOrders(dataConnect, {
-    status: params.status && params.status !== 'all' ? params.status : undefined,
-    paymentStatus:
-      params.paymentStatus && params.paymentStatus !== 'all' ? params.paymentStatus : undefined,
-  });
+  const snap = await getDocs(
+    query(collection(firestoreDb, 'orders'), orderBy('placedAt', 'desc')),
+  );
 
-  const mapped = data.orders.map(mapOrder);
+  let mapped = snap.docs.map((d) => mapOrder(d.id, d.data() as FirestoreOrderDoc));
+
+  if (params.status && params.status !== 'all') {
+    mapped = mapped.filter((o) => o.status === params.status);
+  }
+  if (params.paymentStatus && params.paymentStatus !== 'all') {
+    mapped = mapped.filter((o) => o.paymentStatus === params.paymentStatus);
+  }
+
   const search = params.search?.trim().toLowerCase();
   if (!search) return mapped;
 
@@ -29,15 +41,69 @@ export async function fetchOrders(params: OrdersQueryParams = {}): Promise<Order
 }
 
 export async function updateOrderStatus(orderId: string, status: OrderStatus): Promise<Order> {
-  await callFunction<
-    { orderId: string; status: OrderStatus },
-    { id: string; status: OrderStatus; paymentStatus: string }
-  >('updateOrderStatus', { orderId, status });
-
-  const all = await fetchOrders({});
-  const updated = all.find((o) => o.id === orderId);
-  if (!updated) {
-    throw new Error('تعذر العثور على الطلب بعد التحديث');
+  const orderRef = doc(firestoreDb, 'orders', orderId);
+  const snap = await getDoc(orderRef);
+  if (!snap.exists()) {
+    throw new Error('الطلب غير موجود');
   }
-  return updated;
+
+  const current = snap.data() as FirestoreOrderDoc;
+  const now = new Date().toISOString();
+  const actor = useWebAuthStore.getState().user;
+
+  const paymentStatus =
+    status === 'delivered'
+      ? 'paid'
+      : status === 'cancelled' && current.paymentStatus === 'paid'
+        ? 'refunded'
+        : current.paymentStatus ?? 'cod';
+
+  const nextHistory = [
+    ...(current.statusHistory ?? []),
+    {
+      id: `hist-${Date.now()}`,
+      fromStatus: current.status,
+      toStatus: status,
+      note: `تغيير الحالة إلى ${status}`,
+      changedByName: actor?.name ?? 'الإدارة',
+      createdAt: now,
+    },
+  ];
+
+  await updateDoc(orderRef, {
+    status,
+    paymentStatus,
+    deliveredAt: status === 'delivered' ? now : (current.deliveredAt ?? null),
+    statusHistory: nextHistory,
+    updatedAt: now,
+  });
+
+  if (current.userId) {
+    const tpl = buildOrderStatusNotification(current.code, status);
+    void notifyCustomerAndPush({
+      userId: current.userId,
+      title: tpl.title,
+      body: tpl.body,
+      type: 'order_update',
+      data: { orderId, status },
+    }).catch(() => undefined);
+  }
+
+  if (actor) {
+    void recordAuditLog({
+      actorId: actor.id,
+      actorName: actor.name,
+      action: `تحديث حالة الطلب إلى ${status}`,
+      entity: 'order',
+      entityId: orderId,
+    });
+  }
+
+  return mapOrder(orderId, {
+    ...current,
+    status,
+    paymentStatus,
+    deliveredAt: status === 'delivered' ? now : (current.deliveredAt ?? null),
+    statusHistory: nextHistory,
+  });
 }

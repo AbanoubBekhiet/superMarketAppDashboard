@@ -20,11 +20,34 @@ export interface User {
   isActive: boolean;
   avatarKey?: string;
   area: string;
+  latitude?: number | null;
+  longitude?: number | null;
   ordersCount: number;
   totalSpent: number;
   lastOrderCode?: string;
   createdAt: string;
   adminProfile?: AdminProfileInfo | null;
+}
+
+export interface CartItem {
+  productId: string;
+  weightOptionId?: string | null;
+  name: string;
+  imageKey: string;
+  unitLabel: string;
+  unitPrice: number;
+  quantity: number;
+}
+
+export interface ActiveCart {
+  userId: string;
+  customerName: string;
+  customerPhone: string;
+  customerArea: string;
+  items: CartItem[];
+  itemsCount: number;
+  subtotal: number;
+  updatedAt: string;
 }
 
 export interface AuthSession {
@@ -199,6 +222,7 @@ export interface Order {
   items: OrderItem[];
   subtotal: number;
   deliveryFee: number;
+  freeDeliveryThreshold?: number;
   discount: number;
   total: number;
   promoCode?: string;

@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { STRINGS } from '@/constants/strings';
 import { LoginPage } from '@/features/auth/pages/LoginPage';
 import { CategoriesPage } from '@/features/categories/pages/CategoriesPage';
+import { ActiveCartsPage } from '@/features/carts/pages/ActiveCartsPage';
 import { CustomersPage } from '@/features/customers/pages/CustomersPage';
 import { CouponsPage } from '@/features/marketing/pages/CouponsPage';
 import { NotificationsBroadcastPage } from '@/features/marketing/pages/NotificationsBroadcastPage';
@@ -110,6 +111,14 @@ export function App() {
           element={
             <ProtectedStaffRoute>
               <CustomersPage />
+            </ProtectedStaffRoute>
+          }
+        />
+        <Route
+          path="/active-carts"
+          element={
+            <ProtectedStaffRoute>
+              <ActiveCartsPage />
             </ProtectedStaffRoute>
           }
         />

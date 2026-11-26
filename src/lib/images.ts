@@ -1,4 +1,7 @@
+import { env } from '@/lib/env';
+
 const IMAGE_MAP: Record<string, string> = {
+  logo: '/images/tazaj/logo.jpeg',
   'prod-tomatoes': '/images/tazaj/prod-tomatoes.png',
   'prod-avocado': '/images/tazaj/prod-avocado.png',
   'prod-milk': '/images/tazaj/prod-milk.png',
@@ -25,12 +28,25 @@ const IMAGE_MAP: Record<string, string> = {
  * Resolves either a Cloud Storage download URL, a seeded `local://key` asset, or a legacy key.
  */
 export function getImageUrl(keyOrUrl?: string | null): string {
-  if (!keyOrUrl) return IMAGE_MAP['prod-tomatoes'];
-  if (keyOrUrl.startsWith('http://') || keyOrUrl.startsWith('https://') || keyOrUrl.startsWith('/')) {
+  if (!keyOrUrl) return IMAGE_MAP.logo;
+  if (
+    keyOrUrl.startsWith('http://') ||
+    keyOrUrl.startsWith('https://') ||
+    keyOrUrl.startsWith('/') ||
+    keyOrUrl.startsWith('blob:') ||
+    keyOrUrl.startsWith('data:')
+  ) {
     return keyOrUrl;
   }
   const normalized = keyOrUrl.startsWith('local://')
     ? keyOrUrl.replace('local://', '')
     : keyOrUrl;
-  return IMAGE_MAP[normalized] ?? IMAGE_MAP['prod-tomatoes'];
+  if (normalized in IMAGE_MAP) {
+    return IMAGE_MAP[normalized];
+  }
+  const r2Base = env.r2UploadUrl.trim().replace(/\/+$/, '');
+  if (r2Base && (normalized.includes('/') || /\.(png|jpe?g|webp|gif|avif)$/i.test(normalized))) {
+    return `${r2Base}/${normalized.replace(/^\/+/, '')}`;
+  }
+  return IMAGE_MAP.logo;
 }

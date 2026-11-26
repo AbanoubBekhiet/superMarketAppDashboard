@@ -12,6 +12,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Select } from '@/components/ui/Select';
 import { ErrorState } from '@/components/ui/StateViews';
 import { STRINGS } from '@/constants/strings';
+import { useAppSettings } from '@/features/marketing/hooks/useMarketing';
 import { useOrders, useUpdateOrderStatus } from '@/features/orders/hooks/useOrders';
 import { formatCurrency, formatDateTime, formatNumber } from '@/lib/format';
 import type { Order, OrderStatus } from '@/types/domain';
@@ -49,6 +50,10 @@ export function OrdersPage() {
     status: statusFilter,
     search,
   });
+
+  const { data: settings = [] } = useAppSettings();
+  const currentFreeThreshold =
+    Number(settings.find((s) => s.key === 'free_delivery_threshold')?.value ?? '450') || 0;
 
   const { mutateAsync: updateStatus, isPending: isUpdating } = useUpdateOrderStatus();
 
@@ -92,11 +97,32 @@ export function OrdersPage() {
         }),
         columnHelper.accessor('total', {
           header: STRINGS.orders.columns.total,
-          cell: (info) => (
-            <span className="font-headline text-title-sm text-primary tabular-nums">
-              {formatCurrency(info.getValue())}
-            </span>
-          ),
+          cell: (info) => {
+            const order = info.row.original;
+            const threshold = order.freeDeliveryThreshold ?? currentFreeThreshold;
+            return (
+              <div className="flex flex-col gap-xs">
+                <span className="font-headline text-title-sm text-primary tabular-nums">
+                  {formatCurrency(info.getValue())}
+                </span>
+                {order.discount > 0 ? (
+                  <Badge variant="mint">
+                    خصم كوبون {formatCurrency(order.discount)}
+                    {order.promoCode ? ` (${order.promoCode})` : ''}
+                  </Badge>
+                ) : null}
+                <span className="font-body text-[11px] text-on-surface-muted tabular-nums">
+                  {order.deliveryFee === 0
+                    ? threshold > 0
+                      ? `توصيل مجاني (الطلب ≥ ${formatCurrency(threshold)})`
+                      : 'توصيل مجاني'
+                    : threshold > 0
+                      ? `توصيل ${formatCurrency(order.deliveryFee)} (أقل من ${formatCurrency(threshold)})`
+                      : `توصيل ${formatCurrency(order.deliveryFee)}`}
+                </span>
+              </div>
+            );
+          },
         }),
         columnHelper.accessor('paymentStatus', {
           header: STRINGS.orders.columns.paymentStatus,
@@ -125,7 +151,7 @@ export function OrdersPage() {
           ),
         }),
       ] as LegacyColumnDef<Order, unknown>[],
-    [],
+    [currentFreeThreshold],
   );
 
   return (
@@ -200,13 +226,50 @@ export function OrdersPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-sm border-t border-outline-subtle">
-              <span className="font-headline text-title-md text-on-surface">
-                {STRINGS.orders.columns.total}
-              </span>
-              <span className="font-headline text-headline-md text-primary tabular-nums">
-                {formatCurrency(selectedOrder.total)}
-              </span>
+            <div className="flex flex-col gap-xs pt-sm border-t border-outline-subtle bg-surface p-md rounded-md">
+              <div className="flex items-center justify-between text-body-sm">
+                <span className="text-on-surface-muted">المجموع الفرعي</span>
+                <span className="font-title text-on-surface tabular-nums">
+                  {formatCurrency(selectedOrder.subtotal)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-body-sm">
+                <span className="text-on-surface-muted">رسوم التوصيل</span>
+                <span className="font-title text-on-surface tabular-nums">
+                  {selectedOrder.deliveryFee === 0
+                    ? 'مجاني'
+                    : formatCurrency(selectedOrder.deliveryFee)}
+                </span>
+              </div>
+              {(() => {
+                const threshold = selectedOrder.freeDeliveryThreshold ?? currentFreeThreshold;
+                if (threshold <= 0) return null;
+                return (
+                  <p className="font-body text-[12px] text-primary">
+                    {selectedOrder.deliveryFee === 0
+                      ? `توصيل مجاني لأن قيمة الطلب (${formatCurrency(selectedOrder.subtotal)}) أكبر من أو تساوي الحد المحدد في الإعدادات (${formatCurrency(threshold)})`
+                      : `تم احتساب رسوم التوصيل (${formatCurrency(selectedOrder.deliveryFee)}) لأن قيمة الطلب (${formatCurrency(selectedOrder.subtotal)}) أقل من الحد المحدد للتوصيل المجاني (${formatCurrency(threshold)})`}
+                  </p>
+                );
+              })()}
+              {selectedOrder.discount > 0 ? (
+                <div className="flex items-center justify-between text-body-sm text-primary">
+                  <span>
+                    خصم كوبون{selectedOrder.promoCode ? ` (${selectedOrder.promoCode})` : ''}
+                  </span>
+                  <span className="font-title tabular-nums">
+                    - {formatCurrency(selectedOrder.discount)}
+                  </span>
+                </div>
+              ) : null}
+              <div className="flex items-center justify-between pt-xs border-t border-outline-subtle">
+                <span className="font-headline text-title-md text-on-surface">
+                  {STRINGS.orders.columns.total}
+                </span>
+                <span className="font-headline text-headline-md text-primary tabular-nums">
+                  {formatCurrency(selectedOrder.total)}
+                </span>
+              </div>
             </div>
 
             <Select

@@ -61,7 +61,11 @@ export function StoreSettingsPage() {
 
   const handleSaveSettings = async (event: React.FormEvent) => {
     event.preventDefault();
-    const entries = Object.entries(draftSettings).map(([key, value]) => ({ key, value }));
+    const entries = settings.map((s) => ({
+      key: s.key,
+      value: getSettingValue(s.key),
+      description: s.description ?? undefined,
+    }));
     if (entries.length === 0) return;
     try {
       await saveSettings(entries);

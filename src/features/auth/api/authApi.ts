@@ -1,7 +1,8 @@
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { STRINGS } from '@/constants/strings';
 import { phoneToAuthEmail, sanitizePublicEmail } from '@/lib/phoneAuth';
-import { callFunction, firebaseAuth } from '@/services/firebase/app';
+import { firebaseAuth, firestoreDb } from '@/services/firebase/app';
 import type { AuthSession, UserRole } from '@/types/domain';
 
 export interface LoginPayload {
@@ -9,19 +10,17 @@ export interface LoginPayload {
   password: string;
 }
 
-interface SyncProfileResponse {
-  user: {
-    id: string;
-    firebaseUid: string;
-    fullName: string;
-    phone: string | null;
-    email: string | null;
-    avatarUrl: string | null;
-    role: UserRole;
-    isActive: boolean;
-    area: string;
-  };
-  claimsRefreshed: boolean;
+interface FirestoreUserDoc {
+  firebaseUid?: string;
+  fullName: string;
+  phone?: string | null;
+  email?: string | null;
+  avatarUrl?: string | null;
+  role: UserRole;
+  isActive: boolean;
+  area?: string;
+  deletedAt?: string | null;
+  createdAt?: string;
 }
 
 function mapAdminAuthError(err: unknown): Error {
@@ -37,7 +36,7 @@ function mapAdminAuthError(err: unknown): Error {
     return new Error(STRINGS.auth.suspendedAccount);
   }
   if (code === 'auth/network-request-failed') {
-    return new Error('تعذر الاتصال بخادم المصادقة. تأكد من تشغيل محاكيات Firebase المحلية.');
+    return new Error('تعذر الاتصال بخادم المصادقة. تأكد من اتصالك بالإنترنت وحاول مرة أخرى.');
   }
   if (err instanceof Error) return err;
   return new Error(STRINGS.auth.invalidCredentials);
@@ -52,45 +51,52 @@ export async function loginAdmin(payload: LoginPayload): Promise<AuthSession> {
     throw mapAdminAuthError(err);
   }
 
-  let synced: SyncProfileResponse;
+  let profile: FirestoreUserDoc | null;
   try {
-    synced = await callFunction<Record<string, never>, SyncProfileResponse>(
-      'syncCurrentUserProfile',
-      {},
-    );
+    const snap = await getDoc(doc(firestoreDb, 'users', credential.user.uid));
+    profile = snap.exists() ? (snap.data() as FirestoreUserDoc) : null;
   } catch (err) {
-    await signOut(firebaseAuth);
+    await signOut(firebaseAuth).catch(() => undefined);
     throw err;
   }
 
-  if (synced.user.role !== 'admin' && synced.user.role !== 'sub_admin') {
+  if (!profile) {
     await signOut(firebaseAuth);
     throw new Error(STRINGS.auth.notStaffError);
   }
 
-  if (!synced.user.isActive) {
+  if (profile.role !== 'admin' && profile.role !== 'sub_admin') {
+    await signOut(firebaseAuth);
+    throw new Error(STRINGS.auth.notStaffError);
+  }
+
+  if (!profile.isActive || profile.deletedAt) {
     await signOut(firebaseAuth);
     throw new Error(STRINGS.auth.suspendedAccount);
   }
 
-  const tokenResult = await credential.user.getIdTokenResult(true);
+  await updateDoc(doc(firestoreDb, 'users', credential.user.uid), {
+    lastLoginAt: new Date().toISOString(),
+  }).catch(() => undefined);
+
+  const token = await credential.user.getIdToken();
 
   return {
-    token: tokenResult.token,
+    token,
     user: {
-      id: synced.user.id,
-      firebaseUid: synced.user.firebaseUid,
-      name: synced.user.fullName,
-      phone: synced.user.phone ?? payload.phone.trim(),
-      email: sanitizePublicEmail(synced.user.email),
-      role: synced.user.role,
-      status: synced.user.isActive ? 'active' : 'suspended',
-      isActive: synced.user.isActive,
-      avatarKey: synced.user.avatarUrl ?? 'avatar-ahmed',
-      area: synced.user.area,
+      id: credential.user.uid,
+      firebaseUid: credential.user.uid,
+      name: profile.fullName,
+      phone: profile.phone ?? payload.phone.trim(),
+      email: sanitizePublicEmail(profile.email ?? credential.user.email),
+      role: profile.role,
+      status: 'active',
+      isActive: true,
+      avatarKey: profile.avatarUrl ?? 'avatar-ahmed',
+      area: profile.area ?? 'الإسكندرية',
       ordersCount: 0,
       totalSpent: 0,
-      createdAt: new Date().toISOString(),
+      createdAt: profile.createdAt ?? new Date().toISOString(),
     },
   };
 }

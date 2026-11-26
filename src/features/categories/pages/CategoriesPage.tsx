@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Package, Plus } from 'lucide-react';
-import { useState } from 'react';
+import { Package, Pencil, Plus, Trash2 } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { CardSkeleton, EmptyState, ErrorState } from '@/components/ui/StateViews';
 import { STRINGS } from '@/constants/strings';
+import { uploadCategoryImage } from '@/features/categories/api/categoriesApi';
 import {
   useCategories,
   useCreateCategory,
@@ -38,6 +39,18 @@ export function CategoriesPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Category | null>(null);
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+  const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [fileInputKey, setFileInputKey] = useState(0);
+
+  useEffect(() => {
+    return () => {
+      if (localPreviewUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(localPreviewUrl);
+      }
+    };
+  }, [localPreviewUrl]);
 
   const { data: categories = [], isLoading, isError, refetch } = useCategories(search);
   const { mutateAsync: createCategory, isPending: isCreating } = useCreateCategory();
@@ -67,29 +80,81 @@ export function CategoriesPage() {
     defaultValues: { name: '', isActive: true },
   });
 
-  const openAddModal = () => {
+  const clearPreview = useCallback(() => {
+    setLocalPreviewUrl((prev) => {
+      if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
+      return null;
+    });
+    setFileInputKey((k) => k + 1);
+  }, []);
+
+  const handleCloseModal = () => {
+    clearPreview();
+    setModalOpen(false);
     setEditing(null);
+    setUploadedImageUrl(null);
+  };
+
+  const openAddModal = () => {
+    clearPreview();
+    setEditing(null);
+    setUploadedImageUrl(null);
     reset({ name: '', isActive: true });
     setModalOpen(true);
   };
 
   const openEditModal = (cat: Category) => {
+    clearPreview();
     setEditing(cat);
+    setUploadedImageUrl(cat.imageKey);
     reset({ name: cat.name, isActive: cat.isActive });
     setModalOpen(true);
   };
 
-  const onSubmit = async (values: CategoryFormValues) => {
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const blobUrl = URL.createObjectURL(file);
+    setLocalPreviewUrl((prev) => {
+      if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
+      return blobUrl;
+    });
+    setIsUploadingImage(true);
     try {
+      const url = await uploadCategoryImage(file);
+      setUploadedImageUrl(url);
+      toast.success(STRINGS.common.imageUploaded);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : STRINGS.common.errorTitle;
+      toast.error(msg || STRINGS.common.errorTitle);
+      setLocalPreviewUrl((prev) => {
+        if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
+        return null;
+      });
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  const onSubmit = async (values: CategoryFormValues) => {
+    if (isUploadingImage) {
+      toast.info(STRINGS.common.uploadingImage);
+      return;
+    }
+    try {
+      const finalImageUrl = uploadedImageUrl ?? editing?.imageKey;
+      const payload = {
+        ...values,
+        ...(finalImageUrl ? { imageUrl: finalImageUrl } : {}),
+      };
       if (editing) {
-        await updateCategory({ id: editing.id, payload: values });
+        await updateCategory({ id: editing.id, payload });
       } else {
-        await createCategory(values);
+        await createCategory(payload);
       }
       toast.success(STRINGS.categories.savedToast);
-      setEditing(null);
       reset({ name: '', isActive: true });
-      setModalOpen(false);
+      handleCloseModal();
     } catch (err) {
       const msg = err instanceof Error ? err.message : STRINGS.common.errorMessage;
       toast.error(msg || STRINGS.common.errorMessage);
@@ -171,17 +236,19 @@ export function CategoriesPage() {
                     <Button
                       variant="outline"
                       size="sm"
+                      aria-label={STRINGS.common.edit}
                       className="text-primary"
                       onClick={() => openEditModal(cat)}
                     >
-                      {STRINGS.common.edit}
+                      <Pencil className="w-4 h-4" aria-hidden="true" />
                     </Button>
                     <Button
                       variant="danger"
                       size="sm"
+                      aria-label={STRINGS.common.delete}
                       onClick={() => setDeletingCategory(cat)}
                     >
-                      {STRINGS.common.delete}
+                      <Trash2 className="w-4 h-4" aria-hidden="true" />
                     </Button>
                   </div>
                 </footer>
@@ -206,7 +273,7 @@ export function CategoriesPage() {
       {/* Add / Edit Category Modal */}
       <Modal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={handleCloseModal}
         title={editing ? STRINGS.categories.modalEditTitle : STRINGS.categories.modalAddTitle}
         maxWidthClass="max-w-md"
       >
@@ -217,6 +284,34 @@ export function CategoriesPage() {
             error={errors.name?.message}
             {...register('name')}
           />
+
+          <div className="flex flex-col gap-sm">
+            <label className="font-title text-title-sm text-on-surface">
+              {STRINGS.common.uploadImage}
+            </label>
+            <div className="flex items-center gap-md">
+              <img
+                src={localPreviewUrl ?? getImageUrl(uploadedImageUrl ?? 'local://logo')}
+                alt={editing?.name ?? STRINGS.categories.nameLabel}
+                className="w-16 h-16 rounded-md object-cover border border-outline-subtle bg-surface shrink-0"
+              />
+              <div className="flex-1 flex flex-col gap-xs">
+                <input
+                  key={fileInputKey}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  disabled={isUploadingImage}
+                  className="font-body text-body-sm text-on-surface-muted file:me-sm file:px-md file:py-xs file:rounded-md file:border file:border-outline-subtle file:bg-mint-surface file:text-on-mint-surface"
+                />
+                {isUploadingImage ? (
+                  <span className="font-body text-body-sm text-primary">
+                    {STRINGS.common.uploadingImage}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+          </div>
 
           <label className="flex items-center gap-sm cursor-pointer">
             <input
@@ -234,7 +329,8 @@ export function CategoriesPage() {
               type="submit"
               variant="primary"
               size="lg"
-              isLoading={isCreating || isUpdating}
+              disabled={isUploadingImage}
+              isLoading={isCreating || isUpdating || isUploadingImage}
               className="flex-1"
             >
               {STRINGS.common.save}
@@ -243,7 +339,7 @@ export function CategoriesPage() {
               type="button"
               variant="outline"
               size="lg"
-              onClick={() => setModalOpen(false)}
+              onClick={handleCloseModal}
             >
               {STRINGS.common.cancel}
             </Button>

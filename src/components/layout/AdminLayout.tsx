@@ -5,7 +5,6 @@ import {
   BellRing,
   FolderTree,
   LayoutDashboard,
-  Leaf,
   LogOut,
   Menu,
   Package,
@@ -13,6 +12,7 @@ import {
   Search,
   Settings,
   ShieldCheck,
+  ShoppingCart,
   Tag,
   TicketPercent,
   Users,
@@ -30,6 +30,7 @@ import {
 import { orderKeys } from '@/features/orders/hooks/useOrders';
 import { overviewKeys } from '@/features/overview/hooks/useOverview';
 import { formatNumber } from '@/lib/format';
+import { getImageUrl } from '@/lib/images';
 import { useWebAuthStore } from '@/store/authStore';
 
 interface AdminLayoutProps {
@@ -46,6 +47,7 @@ const STAFF_NAV_ITEMS = [
   { to: '/products', label: STRINGS.sidebar.products, icon: Package, adminOnly: false },
   { to: '/categories', label: STRINGS.sidebar.categories, icon: FolderTree, adminOnly: false },
   { to: '/customers', label: STRINGS.sidebar.customers, icon: Users, adminOnly: false },
+  { to: '/active-carts', label: STRINGS.sidebar.activeCarts, icon: ShoppingCart, adminOnly: false },
   { to: '/offers', label: STRINGS.sidebar.offers, icon: Tag, adminOnly: false },
   { to: '/coupons', label: STRINGS.sidebar.coupons, icon: TicketPercent, adminOnly: false },
   { to: '/notifications', label: STRINGS.sidebar.notifications, icon: BellRing, adminOnly: false },
@@ -110,18 +112,20 @@ export function AdminLayout({
 
   const sidebarContent = (
     <div className="flex flex-col justify-between h-full">
-      <div className="flex flex-col gap-xl">
+      <div className="flex flex-col gap-md">
         {/* Brand Mark */}
-        <div className="flex items-center justify-between px-sm pt-xs">
-          <div className="flex items-center gap-md">
-            <div className="w-10 h-10 rounded-md bg-primary text-on-primary flex items-center justify-center shrink-0">
-              <Leaf className="w-5 h-5" aria-hidden="true" />
-            </div>
+        <div className="flex items-center justify-between px-xs pt-xs">
+          <div className="flex items-center gap-sm">
+            <img
+              src={getImageUrl('local://logo')}
+              alt={STRINGS.brand.name}
+              className="w-9 h-9 rounded-md object-cover border border-outline-subtle shrink-0"
+            />
             <div className="flex flex-col">
-              <span className="font-headline text-title-lg text-on-surface">
+              <span className="font-headline text-title-md text-on-surface leading-tight">
                 {STRINGS.brand.name}
               </span>
-              <span className="font-body text-body-sm text-on-surface-subtle">
+              <span className="font-body text-body-sm text-on-surface-subtle leading-tight">
                 {STRINGS.brand.subtitle}
               </span>
             </div>
@@ -130,14 +134,14 @@ export function AdminLayout({
             type="button"
             onClick={() => setMobileMenuOpen(false)}
             aria-label={STRINGS.common.cancel}
-            className="lg:hidden w-9 h-9 rounded-md border border-outline-subtle flex items-center justify-center text-on-surface"
+            className="lg:hidden w-8 h-8 rounded-md border border-outline-subtle flex items-center justify-center text-on-surface"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Navigation Links */}
-        <nav aria-label={STRINGS.brand.subtitle} className="flex flex-col gap-xs">
+        <nav aria-label={STRINGS.brand.subtitle} className="flex flex-col gap-0.5">
           {visibleNavItems.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
@@ -145,31 +149,31 @@ export function AdminLayout({
               end={to === '/'}
               onClick={() => setMobileMenuOpen(false)}
               className={({ isActive }) =>
-                `flex items-center gap-md px-md py-md rounded-md font-label text-label-lg transition-colors duration-state-change ${
+                `flex items-center gap-sm px-sm py-2 rounded-md font-label text-label-md transition-colors duration-state-change ${
                   isActive
                     ? 'bg-mint-surface border border-outline text-primary-deep'
                     : 'text-on-surface-muted hover:bg-surface hover:text-primary border border-transparent'
                 }`
               }
             >
-              <Icon className="w-5 h-5 shrink-0" aria-hidden="true" />
-              <span>{label}</span>
+              <Icon className="w-4 h-4 shrink-0" aria-hidden="true" />
+              <span className="truncate">{label}</span>
             </NavLink>
           ))}
         </nav>
       </div>
 
       {/* Admin Footer */}
-      <div className="pt-base border-t border-outline-subtle flex items-center justify-between gap-sm px-sm">
-        <div className="flex items-center gap-md min-w-0">
-          <div className="w-9 h-9 rounded-full bg-mint-surface text-primary-deep flex items-center justify-center font-headline text-title-sm shrink-0">
+      <div className="pt-sm border-t border-outline-subtle flex items-center justify-between gap-xs px-xs">
+        <div className="flex items-center gap-sm min-w-0">
+          <div className="w-8 h-8 rounded-full bg-mint-surface text-primary-deep flex items-center justify-center font-headline text-label-md shrink-0">
             {user?.name?.charAt(0) ?? 'س'}
           </div>
           <div className="flex flex-col min-w-0">
-            <span className="font-title text-title-sm text-on-surface truncate">
+            <span className="font-title text-label-md text-on-surface truncate">
               {user?.name ?? 'سارة الشافعي'}
             </span>
-            <span className="font-body text-body-sm text-on-surface-subtle">
+            <span className="font-body text-[11px] text-on-surface-subtle leading-tight">
               {user?.role === 'admin'
                 ? STRINGS.brand.adminRoleBadge
                 : STRINGS.brand.subAdminRoleBadge}
@@ -181,7 +185,7 @@ export function AdminLayout({
           onClick={handleLogout}
           aria-label={STRINGS.common.logout}
           title={STRINGS.common.logout}
-          className="w-9 h-9 rounded-md bg-surface border border-outline-subtle text-error hover:bg-error-container flex items-center justify-center transition-colors duration-state-change shrink-0"
+          className="w-8 h-8 rounded-md bg-surface border border-outline-subtle text-error hover:bg-error-container flex items-center justify-center transition-colors duration-state-change shrink-0"
         >
           <LogOut className="w-4 h-4" aria-hidden="true" />
         </button>
@@ -192,7 +196,7 @@ export function AdminLayout({
   return (
     <div className="min-h-screen flex bg-surface">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex w-64 shrink-0 bg-surface-card border-e border-outline-subtle min-h-screen flex-col p-base sticky top-0 h-screen">
+      <aside className="hidden lg:flex w-56 shrink-0 bg-surface-card border-e border-outline-subtle min-h-screen flex-col p-sm sticky top-0 h-screen">
         {sidebarContent}
       </aside>
 

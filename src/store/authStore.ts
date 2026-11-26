@@ -1,24 +1,24 @@
 import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { sanitizePublicEmail } from '@/lib/phoneAuth';
 import { queryClient } from '@/lib/queryClient';
-import { callFunction, firebaseAuth } from '@/services/firebase/app';
+import { firebaseAuth, firestoreDb } from '@/services/firebase/app';
 import type { AuthSession, User, UserRole } from '@/types/domain';
 
-interface SyncProfileResponse {
-  user: {
-    id: string;
-    firebaseUid: string;
-    fullName: string;
-    phone: string | null;
-    email: string | null;
-    avatarUrl: string | null;
-    role: UserRole;
-    isActive: boolean;
-    area: string;
-  };
-  claimsRefreshed: boolean;
+interface FirestoreUserDoc {
+  id?: string;
+  firebaseUid?: string;
+  fullName: string;
+  phone?: string | null;
+  email?: string | null;
+  avatarUrl?: string | null;
+  role: UserRole;
+  isActive: boolean;
+  area?: string;
+  deletedAt?: string | null;
+  createdAt?: string;
 }
 
 interface WebAuthState {
@@ -53,36 +53,40 @@ export const useWebAuthStore = create<WebAuthState>()(
             }
 
             try {
-              const synced = await callFunction<Record<string, never>, SyncProfileResponse>(
-                'syncCurrentUserProfile',
-                {},
-              );
+              const userSnap = await getDoc(doc(firestoreDb, 'users', fbUser.uid));
+              const profile = userSnap.exists()
+                ? (userSnap.data() as FirestoreUserDoc)
+                : null;
+
               if (
-                (synced.user.role !== 'admin' && synced.user.role !== 'sub_admin') ||
-                !synced.user.isActive
+                !profile ||
+                (profile.role !== 'admin' && profile.role !== 'sub_admin') ||
+                !profile.isActive ||
+                Boolean(profile.deletedAt)
               ) {
                 await signOut(firebaseAuth).catch(() => undefined);
                 set({ user: null, token: null, isHydrated: true });
                 resolve();
                 return;
               }
-              const tokenResult = await fbUser.getIdTokenResult(true);
+
+              const token = await fbUser.getIdToken();
               set({
-                token: tokenResult.token,
+                token,
                 user: {
-                  id: synced.user.id,
-                  firebaseUid: synced.user.firebaseUid,
-                  name: synced.user.fullName,
-                  phone: synced.user.phone ?? '',
-                  email: sanitizePublicEmail(synced.user.email),
-                  role: synced.user.role,
+                  id: fbUser.uid,
+                  firebaseUid: fbUser.uid,
+                  name: profile.fullName,
+                  phone: profile.phone ?? '',
+                  email: sanitizePublicEmail(profile.email ?? fbUser.email),
+                  role: profile.role,
                   status: 'active',
                   isActive: true,
-                  avatarKey: synced.user.avatarUrl ?? 'avatar-ahmed',
-                  area: synced.user.area,
+                  avatarKey: profile.avatarUrl ?? 'avatar-ahmed',
+                  area: profile.area ?? 'الإسكندرية',
                   ordersCount: 0,
                   totalSpent: 0,
-                  createdAt: new Date().toISOString(),
+                  createdAt: profile.createdAt ?? new Date().toISOString(),
                 },
                 isHydrated: true,
               });
