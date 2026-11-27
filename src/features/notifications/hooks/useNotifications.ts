@@ -15,25 +15,46 @@ export function useNotifications(enabled = true) {
   useEffect(() => {
     if (!enabled) return undefined;
 
-    const q = query(
+    const primaryQuery = query(
       collection(firestoreDb, 'notifications'),
       where('targetRole', '==', 'staff'),
       orderBy('createdAt', 'desc'),
       limit(50),
     );
+    const fallbackQuery = query(
+      collection(firestoreDb, 'notifications'),
+      where('targetRole', '==', 'staff'),
+    );
 
+    let fallbackUnsub: (() => void) | null = null;
     const unsubscribe = onSnapshot(
-      q,
+      primaryQuery,
       (snap) => {
         const items = snap.docs.map((d) =>
           mapNotification(d.id, d.data() as FirestoreNotificationDoc),
         );
         qc.setQueryData(notificationKeys.all, items);
       },
-      () => undefined,
+      () => {
+        if (fallbackUnsub) return;
+        fallbackUnsub = onSnapshot(
+          fallbackQuery,
+          (snap) => {
+            const items = snap.docs
+              .map((d) => mapNotification(d.id, d.data() as FirestoreNotificationDoc))
+              .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+              .slice(0, 50);
+            qc.setQueryData(notificationKeys.all, items);
+          },
+          () => undefined,
+        );
+      },
     );
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      fallbackUnsub?.();
+    };
   }, [enabled, qc]);
 
   return useQuery({

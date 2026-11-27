@@ -22,6 +22,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/Badge';
 import { STRINGS } from '@/constants/strings';
+import { activeCartKeys } from '@/features/carts/hooks/useActiveCarts';
 import { customerKeys } from '@/features/customers/hooks/useCustomers';
 import {
   useMarkAllNotificationsRead,
@@ -69,16 +70,23 @@ export function AdminLayout({
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [browserNotifPermission, setBrowserNotifPermission] = useState<NotificationPermission | null>(
+    () => (typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : null),
+  );
   const seenNotifIdsRef = useRef<Set<string> | null>(null);
 
   const isStaffSession = Boolean(
     user && (user.role === 'admin' || user.role === 'sub_admin') && user.isActive,
   );
-  const { data: notifications = [] } = useNotifications(isStaffSession);
+  const { data: notifications = [], isFetched } = useNotifications(isStaffSession);
   const { mutate: markAllRead } = useMarkAllNotificationsRead();
 
   useEffect(() => {
-    if (!isStaffSession || notifications.length === 0) return;
+    seenNotifIdsRef.current = null;
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!isStaffSession || !isFetched) return;
     if (seenNotifIdsRef.current === null) {
       seenNotifIdsRef.current = new Set(notifications.map((n) => n.id));
       return;
@@ -92,11 +100,36 @@ export function AdminLayout({
     if (unseenNew.length > 0) {
       const latest = unseenNew[0];
       toast.info(`${latest.title}: ${latest.body}`);
+      if (
+        typeof window !== 'undefined' &&
+        'Notification' in window &&
+        Notification.permission === 'granted'
+      ) {
+        try {
+          new Notification(latest.title, {
+            body: latest.body,
+            icon: '/images/tazaj/logo.jpeg',
+            tag: latest.id,
+          });
+        } catch {
+          // Ignore browser desktop notification failures
+        }
+      }
       void qc.invalidateQueries({ queryKey: orderKeys.all });
       void qc.invalidateQueries({ queryKey: customerKeys.all });
+      void qc.invalidateQueries({ queryKey: activeCartKeys.all });
       void qc.invalidateQueries({ queryKey: overviewKeys.all });
     }
-  }, [isStaffSession, notifications, qc]);
+  }, [isFetched, isStaffSession, notifications, qc]);
+
+  const handleEnableBrowserNotifications = async () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    const perm = await Notification.requestPermission();
+    setBrowserNotifPermission(perm);
+    if (perm === 'granted') {
+      toast.success('تم تفعيل تنبيهات المتصفح للطلبات والعملاء الجدد');
+    }
+  };
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
@@ -272,17 +305,28 @@ export function AdminLayout({
 
               {notifOpen ? (
                 <div className="absolute end-0 mt-sm w-80 bg-surface-card border border-outline-subtle rounded-lg shadow-card z-40 overflow-hidden">
-                  <div className="px-base py-md border-b border-outline-subtle flex items-center justify-between bg-surface">
+                  <div className="px-base py-md border-b border-outline-subtle flex items-center justify-between bg-surface gap-sm">
                     <span className="font-title text-title-sm text-on-surface">
                       {STRINGS.common.notifications}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => markAllRead()}
-                      className="font-label text-label-sm text-primary hover:underline"
-                    >
-                      {STRINGS.common.markAllRead}
-                    </button>
+                    <div className="flex items-center gap-sm">
+                      {browserNotifPermission === 'default' ? (
+                        <button
+                          type="button"
+                          onClick={handleEnableBrowserNotifications}
+                          className="font-label text-label-sm text-on-surface-muted hover:text-primary"
+                        >
+                          تفعيل تنبيهات المتصفح
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => markAllRead()}
+                        className="font-label text-label-sm text-primary hover:underline"
+                      >
+                        {STRINGS.common.markAllRead}
+                      </button>
+                    </div>
                   </div>
                   <div className="divide-y divide-outline-subtle max-h-72 overflow-y-auto">
                     {notifications.length === 0 ? (
