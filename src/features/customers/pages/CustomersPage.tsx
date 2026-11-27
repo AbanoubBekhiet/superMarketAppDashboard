@@ -393,7 +393,7 @@ export function CustomersPage() {
                   >
                     <div className="flex flex-col gap-xs">
                       <span dir="ltr" className="inline-block font-title text-title-sm text-on-surface tabular-nums">
-                        #{order.id.slice(0, 8)}
+                        {order.code || `#${order.id.slice(0, 8)}`}
                       </span>
                       <span className="font-body text-body-sm text-on-surface-subtle">
                         {formatShortDate(order.createdAt)} •{' '}

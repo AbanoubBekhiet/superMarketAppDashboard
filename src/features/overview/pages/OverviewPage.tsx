@@ -79,11 +79,7 @@ export function OverviewPage() {
                 <span className="font-headline text-display-lg-mobile text-on-surface tabular-nums">
                   {formatCurrency(overview.totalRevenue)}
                 </span>
-                <Badge variant="mint">+{formatNumber(overview.revenueGrowthPercent)}%</Badge>
               </div>
-              <span className="font-body text-body-sm text-on-surface-subtle">
-                {STRINGS.overview.comparedLastMonth}
-              </span>
             </Card>
 
             <Card className="flex flex-col justify-between gap-md">
@@ -103,10 +99,6 @@ export function OverviewPage() {
                   {formatNumber(overview.processingOrdersCount)} {STRINGS.overview.processingSuffix}
                 </Badge>
               </div>
-              <span className="font-body text-body-sm text-on-surface-subtle tabular-nums">
-                {STRINGS.overview.avgDeliveryPrefix} {formatNumber(overview.avgDeliveryMinutes)}{' '}
-                {STRINGS.overview.minutesSuffix}
-              </span>
             </Card>
 
             <Card className="flex flex-col justify-between gap-md">
@@ -122,9 +114,6 @@ export function OverviewPage() {
                 <span className="font-headline text-display-lg-mobile text-on-surface tabular-nums">
                   {formatNumber(overview.totalProductsCount)}
                 </span>
-                <Badge variant="error">
-                  {formatNumber(overview.lowStockCount)} {STRINGS.overview.lowStockSuffix}
-                </Badge>
               </div>
               <span className="font-body text-body-sm text-on-surface-subtle tabular-nums">
                 {STRINGS.overview.categoriesSummaryPrefix}{' '}

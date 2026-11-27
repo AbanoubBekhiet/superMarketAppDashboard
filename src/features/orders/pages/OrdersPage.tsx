@@ -66,17 +66,18 @@ export function OrdersPage() {
   const columns = useMemo(
     () =>
       [
-        columnHelper.accessor('id', {
+        columnHelper.accessor('code', {
           header: STRINGS.orders.columns.code,
           cell: (info) => {
-            const fullId = info.getValue();
+            const order = info.row.original;
+            const displayCode = info.getValue() || `#${order.id.slice(0, 8)}`;
             return (
               <span
                 dir="ltr"
-                title={fullId}
+                title={order.id}
                 className="inline-block font-title text-title-sm text-on-surface tabular-nums"
               >
-                #{fullId.slice(0, 8)}
+                {displayCode}
               </span>
             );
           },
@@ -190,7 +191,7 @@ export function OrdersPage() {
         onClose={() => setSelectedOrder(null)}
         title={
           selectedOrder
-            ? `${STRINGS.orders.detailsModalTitle} #${selectedOrder.id.slice(0, 8)}`
+            ? `${STRINGS.orders.detailsModalTitle} ${selectedOrder.code || `#${selectedOrder.id.slice(0, 8)}`}`
             : ''
         }
       >

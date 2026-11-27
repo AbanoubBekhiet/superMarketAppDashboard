@@ -17,6 +17,7 @@ export interface ProductUpsertPayload {
   salePrice?: number | null;
   purchasePrice?: number | null;
   stockUnit?: string;
+  piecesPerUnit?: number;
   isActive?: boolean;
   isDailyOffer?: boolean;
   imageUrl?: string | null;
@@ -105,6 +106,8 @@ export async function createProduct(payload: ProductUpsertPayload): Promise<Prod
   const isActive = payload.isActive ?? true;
   const isDailyOffer = payload.isDailyOffer ?? false;
   const salePrice = payload.salePrice ?? null;
+  const piecesPerUnit =
+    payload.piecesPerUnit && payload.piecesPerUnit > 0 ? Math.round(payload.piecesPerUnit) : 1;
 
   const docData: FirestoreProductDoc = {
     categoryId: payload.categoryId,
@@ -118,6 +121,7 @@ export async function createProduct(payload: ProductUpsertPayload): Promise<Prod
     stockQuantity: 1000,
     lowStockThreshold: 10,
     unit,
+    piecesPerUnit,
     imageUrl,
     isActive,
     isFeatured: false,
@@ -192,6 +196,14 @@ export async function updateProduct(
   const nextIsActive = payload.isActive ?? current.isActive ?? true;
   const nextIsDailyOffer = payload.isDailyOffer ?? current.isDailyOffer ?? false;
   const nextUnit = payload.stockUnit?.trim() || current.unit || 'عبوة';
+  const nextPiecesPerUnit =
+    payload.piecesPerUnit && payload.piecesPerUnit > 0
+      ? Math.round(payload.piecesPerUnit)
+      : current.piecesPerUnit;
+  const nextWeights =
+    payload.stockUnit?.trim() && current.weights && current.weights.length > 0
+      ? current.weights.map((w, idx) => (idx === 0 ? { ...w, label: nextUnit } : w))
+      : undefined;
   const nextImageUrl = payload.imageUrl ?? current.imageUrl ?? 'local://logo';
 
   const patch: Partial<FirestoreProductDoc> = {
@@ -201,6 +213,8 @@ export async function updateProduct(
     price: nextPrice,
     salePrice: nextSalePrice,
     unit: nextUnit,
+    ...(nextPiecesPerUnit !== undefined ? { piecesPerUnit: nextPiecesPerUnit } : {}),
+    ...(nextWeights ? { weights: nextWeights } : {}),
     imageUrl: nextImageUrl,
     isActive: nextIsActive,
     isDailyOffer: nextIsDailyOffer,

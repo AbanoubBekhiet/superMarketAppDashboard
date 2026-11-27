@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { KeyRound, Plus, ShieldCheck, Trash2, UserCog } from 'lucide-react';
+import { Plus, ShieldCheck, Trash2, UserCog } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -16,7 +16,6 @@ import { STRINGS } from '@/constants/strings';
 import {
   useCreateSubAdmin,
   useDeleteSubAdmin,
-  useResetSubAdminPassword,
   useSubAdmins,
   useToggleSubAdminStatus,
   useUpdateSubAdmin,
@@ -55,8 +54,6 @@ export function SubAdminsPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<User | null>(null);
   const [deletingMember, setDeletingMember] = useState<User | null>(null);
-  const [resetTarget, setResetTarget] = useState<User | null>(null);
-  const [newPasswordInput, setNewPasswordInput] = useState('');
 
   const { data: members = [], isLoading, isError, refetch } = useSubAdmins(
     currentUser?.role === 'admin',
@@ -65,7 +62,6 @@ export function SubAdminsPage() {
   const { mutateAsync: updateMutate, isPending: isUpdating } = useUpdateSubAdmin();
   const { mutate: toggleStatus } = useToggleSubAdminStatus();
   const { mutateAsync: removeSubAdmin, isPending: isDeletingMember } = useDeleteSubAdmin();
-  const { mutateAsync: resetPasswordMutate, isPending: isResetting } = useResetSubAdminPassword();
 
   const createForm = useForm<CreateFormValues>({
     resolver: zodResolver(createSchema),
@@ -125,19 +121,6 @@ export function SubAdminsPage() {
       await updateMutate({ userId: editingMember.id, ...values });
       toast.success(STRINGS.subAdmins.updatedToast);
       setEditingMember(null);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : STRINGS.common.errorMessage;
-      toast.error(msg || STRINGS.common.errorMessage);
-    }
-  };
-
-  const handleResetPassword = async () => {
-    if (!resetTarget || newPasswordInput.length < 8) return;
-    try {
-      await resetPasswordMutate({ userId: resetTarget.id, newPassword: newPasswordInput });
-      toast.success(STRINGS.subAdmins.passwordResetToast);
-      setResetTarget(null);
-      setNewPasswordInput('');
     } catch (err) {
       const msg = err instanceof Error ? err.message : STRINGS.common.errorMessage;
       toast.error(msg || STRINGS.common.errorMessage);
@@ -231,14 +214,6 @@ export function SubAdminsPage() {
                             <Button variant="outline" size="sm" onClick={() => openEdit(member)}>
                               <UserCog className="w-3.5 h-3.5" />
                               <span>{STRINGS.common.edit}</span>
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setResetTarget(member)}
-                            >
-                              <KeyRound className="w-3.5 h-3.5" />
-                              <span>{STRINGS.subAdmins.resetPasswordBtn}</span>
                             </Button>
                             {!isSelf && !isPrimary ? (
                               <>
@@ -387,41 +362,6 @@ export function SubAdminsPage() {
         </form>
       </Modal>
 
-      {/* Reset Password Modal */}
-      <Modal
-        open={Boolean(resetTarget)}
-        onClose={() => setResetTarget(null)}
-        title={STRINGS.subAdmins.resetPasswordTitle}
-      >
-        <div className="flex flex-col gap-md">
-          <Input
-            label={STRINGS.subAdmins.newPasswordLabel}
-            type="password"
-            value={newPasswordInput}
-            onChange={(e) => setNewPasswordInput(e.target.value)}
-          />
-          <div className="flex items-center gap-sm">
-            <Button
-              type="button"
-              variant="primary"
-              size="lg"
-              isLoading={isResetting}
-              disabled={newPasswordInput.length < 8}
-              onClick={handleResetPassword}
-            >
-              {STRINGS.common.save}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              onClick={() => setResetTarget(null)}
-            >
-              {STRINGS.common.cancel}
-            </Button>
-          </div>
-        </div>
-      </Modal>
       <ConfirmModal
         open={deletingMember !== null}
         onClose={() => setDeletingMember(null)}

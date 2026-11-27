@@ -29,9 +29,16 @@ import { formatCurrency, formatNumber } from '@/lib/format';
 import { getImageUrl } from '@/lib/images';
 import type { Product } from '@/types/domain';
 
+const PRODUCT_UNITS = ['شريط', 'علبة', 'كرتونة'] as const;
+
 const productSchema = z.object({
   name: z.string().trim().min(2, STRINGS.common.requiredField),
   categoryId: z.string().min(1, STRINGS.common.requiredField),
+  stockUnit: z.enum(PRODUCT_UNITS),
+  piecesPerUnit: z.coerce
+    .number()
+    .int(STRINGS.common.positiveNumber)
+    .min(1, STRINGS.common.positiveNumber),
   price: z.coerce.number().positive(STRINGS.common.positiveNumber),
   purchasePrice: z
     .union([z.coerce.number().min(0, STRINGS.common.positiveNumber), z.literal('')])
@@ -99,6 +106,8 @@ export function ProductsPage() {
     defaultValues: {
       name: '',
       categoryId: '',
+      stockUnit: 'علبة',
+      piecesPerUnit: '1',
       price: '',
       purchasePrice: '',
       isActive: true,
@@ -122,6 +131,8 @@ export function ProductsPage() {
     reset({
       name: '',
       categoryId: defaultCat,
+      stockUnit: 'علبة',
+      piecesPerUnit: '1',
       price: '',
       purchasePrice: '',
       isActive: true,
@@ -135,9 +146,16 @@ export function ProductsPage() {
       setEditingProduct(product);
       setDraftProductId(product.id);
       setUploadedImageUrl(product.imageKey);
+      const matchedUnit = PRODUCT_UNITS.includes(
+        product.unitLabel as (typeof PRODUCT_UNITS)[number],
+      )
+        ? (product.unitLabel as (typeof PRODUCT_UNITS)[number])
+        : 'علبة';
       reset({
         name: product.name,
         categoryId: product.categoryId,
+        stockUnit: matchedUnit,
+        piecesPerUnit: String(product.piecesPerUnit ?? 1),
         price: String(product.regularPrice ?? product.price),
         purchasePrice:
           product.purchasePrice !== null && product.purchasePrice !== undefined
@@ -247,6 +265,8 @@ export function ProductsPage() {
         id: editingProduct?.id || draftProductId || undefined,
         name: values.name,
         categoryId: resolvedCategoryId,
+        stockUnit: values.stockUnit,
+        piecesPerUnit: values.piecesPerUnit,
         price: values.price,
         purchasePrice: parsedPurchase,
         isActive: values.isActive,
@@ -295,6 +315,19 @@ export function ProductsPage() {
           cell: (info) => (
             <span className="font-body text-body-sm text-on-surface">{info.getValue()}</span>
           ),
+        }),
+        columnHelper.display({
+          id: 'unitInfo',
+          header: STRINGS.products.columns.unit,
+          cell: (info) => {
+            const product = info.row.original;
+            return (
+              <span className="font-body text-body-sm text-on-surface-muted">
+                {product.unitLabel}
+                {product.piecesPerUnit ? ` (${formatNumber(product.piecesPerUnit)} قطعة)` : ''}
+              </span>
+            );
+          },
         }),
         columnHelper.accessor('price', {
           header: STRINGS.products.columns.price,
@@ -468,6 +501,23 @@ export function ProductsPage() {
             error={errors.categoryId?.message}
             {...register('categoryId')}
           />
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-sm">
+            <Select
+              label={STRINGS.products.fields.unit}
+              options={PRODUCT_UNITS.map((u) => ({ value: u, label: u }))}
+              error={errors.stockUnit?.message}
+              {...register('stockUnit')}
+            />
+            <Input
+              label={STRINGS.products.fields.piecesPerUnit}
+              type="number"
+              min={1}
+              placeholder={STRINGS.products.fields.piecesPerUnitPlaceholder}
+              error={errors.piecesPerUnit?.message}
+              {...register('piecesPerUnit')}
+            />
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-sm">
             <Input

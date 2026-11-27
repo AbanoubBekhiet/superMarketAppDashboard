@@ -120,6 +120,7 @@ export interface Product {
   description: string;
   imageKey: string;
   unitLabel: string;
+  piecesPerUnit?: number;
   price: number;
   regularPrice?: number;
   salePrice?: number | null;
