@@ -67,6 +67,8 @@ export interface FirestoreOrderDoc {
   customerNameSnapshot: string;
   customerAreaSnapshot: string;
   addressSnapshot: string;
+  customerLatitude?: number | null;
+  customerLongitude?: number | null;
   subtotal: number;
   deliveryFee: number;
   freeDeliveryThreshold?: number;
@@ -237,6 +239,8 @@ export function mapOrder(id: string, row: FirestoreOrderDoc): Order {
     customerName: row.customerNameSnapshot,
     customerArea: row.customerAreaSnapshot,
     customerAddress: row.addressSnapshot,
+    customerLatitude: row.customerLatitude ?? null,
+    customerLongitude: row.customerLongitude ?? null,
     itemsCount: items.reduce((sum, i) => sum + i.quantity, 0),
     items: items.map((item) => ({
       productId: item.productId,

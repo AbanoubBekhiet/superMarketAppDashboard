@@ -52,6 +52,7 @@ export async function fetchOverview(): Promise<DashboardOverview> {
   const activeOrders = orders.filter((o) =>
     ['pending', 'processing', 'on_the_way'].includes(o.status),
   );
+  const pendingOrders = orders.filter((o) => o.status === 'pending');
   const processingOrders = orders.filter((o) => o.status === 'processing');
 
   const etas = orders
@@ -175,6 +176,7 @@ export async function fetchOverview(): Promise<DashboardOverview> {
     totalRevenue,
     revenueGrowthPercent: 14.5,
     activeOrdersCount: activeOrders.length,
+    pendingOrdersCount: pendingOrders.length,
     processingOrdersCount: processingOrders.length,
     avgDeliveryMinutes,
     totalProductsCount: products.length,

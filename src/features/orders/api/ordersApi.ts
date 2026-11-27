@@ -22,6 +22,50 @@ export async function fetchOrders(params: OrdersQueryParams = {}): Promise<Order
 
   let mapped = snap.docs.map((d) => mapOrder(d.id, d.data() as FirestoreOrderDoc));
 
+  const missingCoordCustomerIds = Array.from(
+    new Set(
+      mapped
+        .filter((o) => o.customerId && o.customerLatitude == null && o.customerLongitude == null)
+        .map((o) => o.customerId),
+    ),
+  );
+  if (missingCoordCustomerIds.length > 0) {
+    const coordEntries = await Promise.all(
+      missingCoordCustomerIds.map(async (customerId) => {
+        const [uSnap, addrSnap] = await Promise.all([
+          getDoc(doc(firestoreDb, 'users', customerId)).catch(() => null),
+          getDocs(collection(firestoreDb, 'users', customerId, 'addresses')).catch(() => null),
+        ]);
+        const uData = uSnap?.exists()
+          ? (uSnap.data() as { latitude?: number | null; longitude?: number | null })
+          : null;
+        const addrs = addrSnap?.docs.map((d) => d.data() as {
+          isDefault?: boolean;
+          latitude?: number | null;
+          longitude?: number | null;
+        }) ?? [];
+        const primaryAddr = addrs.find((a) => a.isDefault) ?? addrs[0];
+        return [
+          customerId,
+          {
+            latitude: primaryAddr?.latitude ?? uData?.latitude ?? null,
+            longitude: primaryAddr?.longitude ?? uData?.longitude ?? null,
+          },
+        ] as const;
+      }),
+    );
+    const coordsByUserId = new Map(coordEntries);
+    mapped = mapped.map((o) => {
+      const coords = coordsByUserId.get(o.customerId);
+      if (!coords) return o;
+      return {
+        ...o,
+        customerLatitude: o.customerLatitude ?? coords.latitude,
+        customerLongitude: o.customerLongitude ?? coords.longitude,
+      };
+    });
+  }
+
   if (params.status && params.status !== 'all') {
     mapped = mapped.filter((o) => o.status === params.status);
   }

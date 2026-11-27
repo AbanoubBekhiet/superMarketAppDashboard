@@ -1,28 +1,30 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { legacyCreateColumnHelper, type LegacyColumnDef } from '@tanstack/react-table/legacy';
 import { Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminLayout } from '@/components/layout/AdminLayout';
-import { Badge, type BadgeVariant } from '@/components/ui/Badge';
+import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { DataTable } from '@/components/ui/DataTable';
 import { FilterChips } from '@/components/ui/FilterChips';
 import { Modal } from '@/components/ui/Modal';
+import { ResolvedAddressText } from '@/components/ui/ResolvedAddressText';
 import { Select } from '@/components/ui/Select';
 import { ErrorState } from '@/components/ui/StateViews';
 import { STRINGS } from '@/constants/strings';
 import { useAppSettings } from '@/features/marketing/hooks/useMarketing';
 import { useOrders, useUpdateOrderStatus } from '@/features/orders/hooks/useOrders';
 import { formatCurrency, formatDateTime, formatNumber } from '@/lib/format';
+import { getImageUrl } from '@/lib/images';
 import type { Order, OrderStatus } from '@/types/domain';
 
-const STATUS_BADGE: Record<OrderStatus, BadgeVariant> = {
-  pending: 'warning',
-  processing: 'mint',
-  on_the_way: 'mint',
-  delivered: 'mint',
-  cancelled: 'error',
+const STATUS_SELECT_CLASS: Record<OrderStatus, string> = {
+  pending: 'bg-warning-container text-on-warning-container border-warning-container',
+  processing: 'bg-mint-surface text-on-mint-surface border-primary/30',
+  on_the_way: 'bg-mint-surface text-on-mint-surface border-primary/30',
+  delivered: 'bg-mint-surface text-primary border-primary/40',
+  cancelled: 'bg-error-container text-on-error-container border-error/30',
 };
 
 const ALL_ORDER_STATUSES: OrderStatus[] = [
@@ -57,11 +59,27 @@ export function OrdersPage() {
 
   const { mutateAsync: updateStatus, isPending: isUpdating } = useUpdateOrderStatus();
 
-  const handleStatusUpdate = async (orderId: string, nextStatus: OrderStatus) => {
-    const updated = await updateStatus({ orderId, status: nextStatus });
-    setSelectedOrder(updated);
-    toast.success(STRINGS.orders.statusUpdatedToast);
-  };
+  const handleStatusUpdate = useCallback(
+    async (orderId: string, nextStatus: OrderStatus) => {
+      try {
+        const updated = await updateStatus({ orderId, status: nextStatus });
+        setSelectedOrder((prev) =>
+          prev?.id === orderId
+            ? {
+                ...updated,
+                customerLatitude: updated.customerLatitude ?? prev.customerLatitude,
+                customerLongitude: updated.customerLongitude ?? prev.customerLongitude,
+              }
+            : prev,
+        );
+        toast.success(STRINGS.orders.statusUpdatedToast);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : STRINGS.common.errorMessage;
+        toast.error(msg || STRINGS.common.errorMessage);
+      }
+    },
+    [updateStatus],
+  );
 
   const columns = useMemo(
     () =>
@@ -132,8 +150,23 @@ export function OrdersPage() {
         columnHelper.accessor('status', {
           header: STRINGS.orders.columns.orderStatus,
           cell: (info) => {
+            const order = info.row.original;
             const st = info.getValue();
-            return <Badge variant={STATUS_BADGE[st]}>{STRINGS.orders.statusLabels[st]}</Badge>;
+            return (
+              <select
+                aria-label={`${STRINGS.orders.changeStatusLabel} ${order.code}`}
+                value={st}
+                disabled={isUpdating}
+                onChange={(e) => handleStatusUpdate(order.id, e.target.value as OrderStatus)}
+                className={`rounded-full border px-sm py-xs font-label-bold text-label-sm cursor-pointer outline-none focus:ring-2 focus:ring-primary/40 transition-colors ${STATUS_SELECT_CLASS[st]}`}
+              >
+                {ALL_ORDER_STATUSES.map((optionStatus) => (
+                  <option key={optionStatus} value={optionStatus} className="bg-surface-card text-on-surface">
+                    {STRINGS.orders.statusLabels[optionStatus]}
+                  </option>
+                ))}
+              </select>
+            );
           },
         }),
         columnHelper.display({
@@ -152,7 +185,7 @@ export function OrdersPage() {
           ),
         }),
       ] as LegacyColumnDef<Order, unknown>[],
-    [currentFreeThreshold],
+    [currentFreeThreshold, handleStatusUpdate, isUpdating],
   );
 
   return (
@@ -172,8 +205,14 @@ export function OrdersPage() {
               value: 'all',
               label: `${STRINGS.orders.allCountPrefix} (${formatNumber(allOrders.length)})`,
             },
-            { value: 'pending', label: STRINGS.orders.statusLabels.pending },
-            { value: 'processing', label: STRINGS.orders.statusLabels.processing },
+            {
+              value: 'pending',
+              label: `${STRINGS.orders.statusLabels.pending} (${formatNumber(allOrders.filter((o) => o.status === 'pending').length)})`,
+            },
+            {
+              value: 'processing',
+              label: `${STRINGS.orders.statusLabels.processing} (${formatNumber(allOrders.filter((o) => o.status === 'processing').length)})`,
+            },
             { value: 'delivered', label: STRINGS.orders.statusLabels.delivered },
             { value: 'cancelled', label: STRINGS.orders.statusLabels.cancelled },
           ]}
@@ -202,24 +241,47 @@ export function OrdersPage() {
                 {selectedOrder.customerName}
               </span>
               <span className="font-body text-body-sm text-on-surface-muted">
-                {STRINGS.orders.customerAddress}: {selectedOrder.customerAddress}
+                {STRINGS.orders.customerAddress}:{' '}
+                <ResolvedAddressText
+                  latitude={selectedOrder.customerLatitude}
+                  longitude={selectedOrder.customerLongitude}
+                  fallback={selectedOrder.customerAddress || selectedOrder.customerArea}
+                  className="font-body text-body-sm text-on-surface"
+                />
               </span>
             </div>
 
             <div className="flex flex-col gap-xs">
-              <h3 className="font-title text-title-sm text-on-surface">
-                {STRINGS.orders.itemsTitle}
-              </h3>
-              <div className="divide-y divide-outline-subtle border border-outline-subtle rounded-md px-md">
+              <div className="flex items-center justify-between">
+                <h3 className="font-title text-title-sm text-on-surface">
+                  {STRINGS.orders.itemsTitle}
+                </h3>
+                <Badge variant="mint">
+                  {formatNumber(selectedOrder.itemsCount)} {STRINGS.activeCarts.itemsSuffix}
+                </Badge>
+              </div>
+              <div className="flex flex-col gap-xs">
                 {selectedOrder.items.map((item, idx) => (
                   <div
                     key={`${item.productId}-${idx}`}
-                    className="py-sm flex items-center justify-between gap-md"
+                    className="p-sm rounded-lg border border-outline-subtle bg-surface flex items-center justify-between gap-sm"
                   >
-                    <span className="font-body text-body-md text-on-surface">
-                      {item.name} × {formatNumber(item.quantity)}
-                    </span>
-                    <span className="font-headline text-title-sm text-primary tabular-nums">
+                    <div className="flex items-center gap-sm min-w-0">
+                      <img
+                        src={getImageUrl(item.imageKey)}
+                        alt={item.name}
+                        className="w-10 h-10 rounded-md object-cover bg-surface-card border border-outline-subtle shrink-0"
+                      />
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-title text-title-sm text-on-surface truncate">
+                          {item.name}
+                        </span>
+                        <span className="font-body text-body-sm text-on-surface-subtle tabular-nums">
+                          {formatNumber(item.quantity)} × {formatCurrency(item.unitPrice)}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="font-headline text-title-sm text-primary tabular-nums shrink-0">
                       {formatCurrency(item.unitPrice * item.quantity)}
                     </span>
                   </div>

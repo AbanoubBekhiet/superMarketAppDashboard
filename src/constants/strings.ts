@@ -82,6 +82,7 @@ export const STRINGS = {
     totalRevenue: 'إجمالي الإيرادات',
     comparedLastMonth: 'مقارنة بالشهر الماضي',
     activeOrders: 'الطلبات النشطة',
+    pendingSuffix: 'قيد الانتظار',
     processingSuffix: 'قيد التجهيز',
     avgDeliveryPrefix: 'متوسط وقت التوصيل:',
     minutesSuffix: 'دقيقة',

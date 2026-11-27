@@ -91,13 +91,18 @@ export function OverviewPage() {
                   <Truck className="w-5 h-5" aria-hidden="true" />
                 </span>
               </div>
-              <div className="flex items-baseline justify-between gap-sm">
+              <div className="flex items-baseline justify-between gap-sm flex-wrap">
                 <span className="font-headline text-display-lg-mobile text-on-surface tabular-nums">
                   {formatNumber(overview.activeOrdersCount)}
                 </span>
-                <Badge variant="warning">
-                  {formatNumber(overview.processingOrdersCount)} {STRINGS.overview.processingSuffix}
-                </Badge>
+                <div className="flex items-center gap-xs flex-wrap">
+                  <Badge variant="warning">
+                    {formatNumber(overview.pendingOrdersCount)} {STRINGS.overview.pendingSuffix}
+                  </Badge>
+                  <Badge variant="mint">
+                    {formatNumber(overview.processingOrdersCount)} {STRINGS.overview.processingSuffix}
+                  </Badge>
+                </div>
               </div>
             </Card>
 

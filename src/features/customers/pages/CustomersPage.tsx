@@ -13,6 +13,7 @@ import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { DataTable } from '@/components/ui/DataTable';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
+import { ResolvedAddressText } from '@/components/ui/ResolvedAddressText';
 import { Select } from '@/components/ui/Select';
 import { EmptyState, ErrorState } from '@/components/ui/StateViews';
 import { STRINGS } from '@/constants/strings';
@@ -151,9 +152,16 @@ export function CustomersPage() {
         }),
         columnHelper.accessor('area', {
           header: STRINGS.customers.columns.area,
-          cell: (info) => (
-            <span className="font-body text-body-sm text-on-surface">{info.getValue()}</span>
-          ),
+          cell: (info) => {
+            const customer = info.row.original;
+            return (
+              <ResolvedAddressText
+                latitude={customer.latitude}
+                longitude={customer.longitude}
+                fallback={info.getValue()}
+              />
+            );
+          },
         }),
         columnHelper.display({
           id: 'location',

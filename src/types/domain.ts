@@ -219,6 +219,8 @@ export interface Order {
   customerName: string;
   customerArea: string;
   customerAddress: string;
+  customerLatitude?: number | null;
+  customerLongitude?: number | null;
   itemsCount: number;
   items: OrderItem[];
   subtotal: number;
@@ -277,6 +279,7 @@ export interface DashboardOverview {
   totalRevenue: number;
   revenueGrowthPercent: number;
   activeOrdersCount: number;
+  pendingOrdersCount: number;
   processingOrdersCount: number;
   avgDeliveryMinutes: number;
   totalProductsCount: number;
