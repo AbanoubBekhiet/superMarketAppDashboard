@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useState, type ReactNode } from 'react';
 import {
   Bell,
   BellRing,
@@ -22,17 +21,18 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/Badge';
 import { STRINGS } from '@/constants/strings';
-import { activeCartKeys } from '@/features/carts/hooks/useActiveCarts';
-import { customerKeys } from '@/features/customers/hooks/useCustomers';
 import {
   useMarkAllNotificationsRead,
   useNotifications,
 } from '@/features/notifications/hooks/useNotifications';
-import { orderKeys } from '@/features/orders/hooks/useOrders';
-import { overviewKeys } from '@/features/overview/hooks/useOverview';
 import { formatNumber } from '@/lib/format';
 import { getImageUrl } from '@/lib/images';
 import { useWebAuthStore } from '@/store/authStore';
+import {
+  resolveNotificationTargetRoute,
+  unlockNotificationAudio,
+  useNotificationAlertStore,
+} from '@/store/notificationAlertStore';
 
 interface AdminLayoutProps {
   title: string;
@@ -66,72 +66,35 @@ export function AdminLayout({
   const user = useWebAuthStore((s) => s.user);
   const logout = useWebAuthStore((s) => s.logout);
   const navigate = useNavigate();
-  const qc = useQueryClient();
+  const liveAlert = useNotificationAlertStore((s) => s.liveAlert);
+  const dismissLiveAlert = useNotificationAlertStore((s) => s.dismissLiveAlert);
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [browserNotifPermission, setBrowserNotifPermission] = useState<NotificationPermission | null>(
     () => (typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : null),
   );
-  const seenNotifIdsRef = useRef<Set<string> | null>(null);
 
   const isStaffSession = Boolean(
     user && (user.role === 'admin' || user.role === 'sub_admin') && user.isActive,
   );
-  const { data: notifications = [], isFetched } = useNotifications(isStaffSession);
+  const { data: notifications = [] } = useNotifications(isStaffSession);
   const { mutate: markAllRead } = useMarkAllNotificationsRead();
 
-  useEffect(() => {
-    seenNotifIdsRef.current = null;
-  }, [user?.id]);
-
-  useEffect(() => {
-    if (!isStaffSession || !isFetched) return;
-    if (seenNotifIdsRef.current === null) {
-      seenNotifIdsRef.current = new Set(notifications.map((n) => n.id));
-      return;
-    }
-
-    const unseenNew = notifications.filter(
-      (n) => !n.isRead && !seenNotifIdsRef.current?.has(n.id),
-    );
-    notifications.forEach((n) => seenNotifIdsRef.current?.add(n.id));
-
-    if (unseenNew.length > 0) {
-      const latest = unseenNew[0];
-      toast.info(`${latest.title}: ${latest.body}`);
-      if (
-        typeof window !== 'undefined' &&
-        'Notification' in window &&
-        Notification.permission === 'granted'
-      ) {
-        try {
-          new Notification(latest.title, {
-            body: latest.body,
-            icon: '/images/tazaj/logo.jpeg',
-            tag: latest.id,
-          });
-        } catch {
-          // Ignore browser desktop notification failures
-        }
-      }
-      void qc.invalidateQueries({ queryKey: orderKeys.all });
-      void qc.invalidateQueries({ queryKey: customerKeys.all });
-      void qc.invalidateQueries({ queryKey: activeCartKeys.all });
-      void qc.invalidateQueries({ queryKey: overviewKeys.all });
-    }
-  }, [isFetched, isStaffSession, notifications, qc]);
-
   const handleEnableBrowserNotifications = async () => {
+    unlockNotificationAudio();
     if (typeof window === 'undefined' || !('Notification' in window)) return;
     const perm = await Notification.requestPermission();
     setBrowserNotifPermission(perm);
     if (perm === 'granted') {
       toast.success('تم تفعيل تنبيهات المتصفح للطلبات والعملاء الجدد');
+    } else if (perm === 'denied') {
+      toast.error('تم حظر إشعارات المتصفح من إعدادات المتصفح؛ يمكنك السماح بها من أيقونة القفل بجانب الرابط.');
     }
   };
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const liveAlertRoute = liveAlert ? resolveNotificationTargetRoute(liveAlert) : null;
 
   const handleLogout = async () => {
     await logout();
@@ -284,12 +247,27 @@ export function AdminLayout({
               </div>
             ) : null}
 
+            {browserNotifPermission === 'default' ? (
+              <button
+                type="button"
+                onClick={handleEnableBrowserNotifications}
+                className="inline-flex items-center gap-xs px-sm sm:px-md py-xs rounded-full bg-mint-surface border border-primary/30 text-primary-deep font-label text-label-sm hover:bg-primary hover:text-on-primary transition-colors duration-state-change"
+              >
+                <BellRing className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                <span className="hidden sm:inline">تفعيل إشعارات المتصفح</span>
+                <span className="sm:hidden">تفعيل التنبيهات</span>
+              </button>
+            ) : null}
+
             {/* Notifications Dropdown */}
             <div className="relative">
               <button
                 type="button"
                 aria-label={STRINGS.common.notifications}
-                onClick={() => setNotifOpen((prev) => !prev)}
+                onClick={() => {
+                  unlockNotificationAudio();
+                  setNotifOpen((prev) => !prev);
+                }}
                 className="relative w-10 h-10 rounded-full bg-surface border border-outline-subtle text-on-surface flex items-center justify-center hover:bg-mint-surface transition-colors duration-state-change"
               >
                 <Bell className="w-5 h-5" aria-hidden="true" />
@@ -334,24 +312,34 @@ export function AdminLayout({
                         {STRINGS.common.noNotifications}
                       </p>
                     ) : (
-                      notifications.map((n) => (
-                        <div
-                          key={n.id}
-                          className={`p-md flex flex-col gap-xs ${
-                            n.isRead ? 'bg-surface-card' : 'bg-mint-surface/35'
-                          }`}
-                        >
-                          <span className="font-title text-title-sm text-on-surface">
-                            {n.title}
-                          </span>
-                          <span className="font-body text-body-sm text-on-surface-muted">
-                            {n.body}
-                          </span>
-                          <span className="font-body text-body-sm text-on-surface-subtle">
-                            {n.relativeTime}
-                          </span>
-                        </div>
-                      ))
+                      notifications.map((n) => {
+                        const target = resolveNotificationTargetRoute(n);
+                        return (
+                          <button
+                            key={n.id}
+                            type="button"
+                            onClick={() => {
+                              setNotifOpen(false);
+                              if (target) {
+                                navigate(target);
+                              }
+                            }}
+                            className={`w-full text-start p-md flex flex-col gap-xs transition-colors hover:bg-surface ${
+                              n.isRead ? 'bg-surface-card' : 'bg-mint-surface/35'
+                            }`}
+                          >
+                            <span className="font-title text-title-sm text-on-surface">
+                              {n.title}
+                            </span>
+                            <span className="font-body text-body-sm text-on-surface-muted">
+                              {n.body}
+                            </span>
+                            <span className="font-body text-body-sm text-on-surface-subtle">
+                              {n.relativeTime}
+                            </span>
+                          </button>
+                        );
+                      })
                     )}
                   </div>
                 </div>
@@ -361,7 +349,51 @@ export function AdminLayout({
         </header>
 
         {/* Main Content */}
-        <main className="p-base lg:p-xl flex-1 flex flex-col gap-lg">{children}</main>
+        <main className="p-base lg:p-xl flex-1 flex flex-col gap-lg">
+          {liveAlert ? (
+            <div
+              role="alert"
+              className="rounded-lg border border-primary bg-mint-surface px-base py-md flex items-center justify-between gap-md flex-wrap shadow-card"
+            >
+              <div className="flex items-center gap-sm min-w-0">
+                <div className="w-9 h-9 rounded-full bg-primary text-on-primary flex items-center justify-center shrink-0">
+                  <BellRing className="w-4 h-4" aria-hidden="true" />
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="font-headline text-title-sm text-on-surface">
+                    {liveAlert.title}
+                  </span>
+                  <span className="font-body text-body-sm text-on-surface-muted">
+                    {liveAlert.body}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-sm shrink-0">
+                {liveAlertRoute ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      dismissLiveAlert();
+                      navigate(liveAlertRoute);
+                    }}
+                    className="px-md py-xs rounded-md bg-primary text-on-primary font-label text-label-sm hover:opacity-90"
+                  >
+                    عرض التفاصيل
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={dismissLiveAlert}
+                  aria-label={STRINGS.common.cancel}
+                  className="w-8 h-8 rounded-md bg-surface border border-outline-subtle text-on-surface-muted flex items-center justify-center hover:text-on-surface"
+                >
+                  <X className="w-4 h-4" aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+          ) : null}
+          {children}
+        </main>
       </div>
     </div>
   );

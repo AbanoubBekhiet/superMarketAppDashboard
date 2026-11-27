@@ -8,6 +8,7 @@ import { LoginPage } from '@/features/auth/pages/LoginPage';
 import { CategoriesPage } from '@/features/categories/pages/CategoriesPage';
 import { ActiveCartsPage } from '@/features/carts/pages/ActiveCartsPage';
 import { CustomersPage } from '@/features/customers/pages/CustomersPage';
+import { StaffNotificationWatcher } from '@/features/notifications/components/StaffNotificationWatcher';
 import { CouponsPage } from '@/features/marketing/pages/CouponsPage';
 import { NotificationsBroadcastPage } from '@/features/marketing/pages/NotificationsBroadcastPage';
 import { OffersPage } from '@/features/marketing/pages/OffersPage';
@@ -72,6 +73,7 @@ export function App() {
 
   return (
     <BrowserRouter>
+      <StaffNotificationWatcher />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route
